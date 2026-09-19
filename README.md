@@ -74,6 +74,13 @@ Situs GitHub Pages bersifat statis (tidak bisa menyimpan API key dengan aman sen
 
 **Bagaimana pengguna (guru/siswa) mendapatkan API key mereka sendiri:** situs memandu ini otomatis di halaman Beranda: buka https://aistudio.google.com/apikey, login dengan akun Google, klik **Create API key** (gratis), lalu tempel key itu di kolom yang disediakan di halaman Beranda atau di tombol Pengaturan. *(Free tier ada batas kecepatan/kuota harian, cek angka terbaru di https://ai.google.dev/gemini-api/docs/rate-limits karena bisa berubah. Untuk pemakaian satu orang/kelas biasanya sudah cukup.)*
 
+**Gambar langkah demi langkah (untuk dipandu ke siswa/guru):**
+
+| Langkah 1 - Panel "Siapkan API key" di halaman Beranda situs | Langkah 2 - Halaman API Keys Google AI Studio | Langkah 3 - Dialog "Create a new key" |
+| --- | --- | --- |
+| ![Langkah 1: panel Siapkan API key di halaman Beranda situs](docs/screenshots/apikey-step1-situs.jpg) | ![Langkah 2: halaman API Keys Google AI Studio](docs/screenshots/apikey-step2-aistudio-keys.jpg) | ![Langkah 3: dialog Create a new key](docs/screenshots/apikey-step3-create-key-dialog.jpg) |
+| Klik link **Buka aistudio.google.com/apikey** di panel ini (langkah 1 di situs). | Setelah login Google, buka menu **API Keys** - tombol **Create API key** ada di kanan atas (kalau sudah pernah bikin key sebelumnya, key lama juga tampil di sini, disamarkan seperti `...Oahw`). | Beri nama bebas, pilih project (boleh biarkan default), klik **Create key**. Key baru (diawali `AIza...`) langsung tampil - salin, lalu tempel ke kolom "Tempel API key Gemini di sini" di situs (langkah 3), klik **Simpan & Lanjut**. |
+
 **Jika API key belum diisi**, tab Lab Simulasi Virtual tetap menawarkan **Mode Demo** (tombol "Coba Mode Demo"): menampilkan simulasi contoh yang sudah disiapkan (bukan hasil AI sungguhan sesuai prompt), supaya pengguna tetap bisa mencoba alurnya sebelum menyiapkan API key.
 
 **Catatan privasi**: pada free tier Gemini, Google boleh memakai isi prompt/output untuk peningkatan produk mereka (ini kebijakan standar layanan gratis mereka, cek detail terbaru di halaman pricing/data policy Gemini API). Wajar untuk prompt simulasi fisika, tapi ingatkan siswa untuk tidak memasukkan data pribadi ke dalam prompt.
@@ -94,9 +101,19 @@ Situs GitHub Pages bersifat statis (tidak bisa menyimpan API key dengan aman sen
 
 ## 4. Navigasi bertahap, Tutor Fisika (chatbot), dan Panel Guru
 
-Tiga fitur ini butuh **satu langkah redeploy Apps Script** (lihat Bagian 3) supaya aktif, karena `apps-script/Code.gs` menambahkan mode `chat`, `session_sync`, `teacher_session`, dan `teacher_roster` di server. Kalau kamu sudah pernah deploy sebelumnya: buka https://script.google.com, buka project-nya, klik **Deploy -> Manage deployments -> Edit (ikon pensil) -> Version: New version -> Deploy**. URL `/exec` tetap sama, tidak perlu ganti `js/config.js` lagi.
+Fitur-fitur ini butuh **satu langkah redeploy Apps Script** (lihat Bagian 3) supaya aktif, karena `apps-script/Code.gs` menambahkan mode `chat`, `session_sync`, `teacher_session`, `teacher_roster`, `gate_submit`, `gate_status`, dan `teacher_gate_decide` di server. Kalau kamu sudah pernah deploy sebelumnya: buka https://script.google.com, buka project-nya, klik **Deploy -> Manage deployments -> Edit (ikon pensil) -> Version: New version -> Deploy**. URL `/exec` tetap sama, tidak perlu ganti `js/config.js` lagi.
 
-**Navigasi bertahap per topik.** Siswa boleh mulai dari topik mana saja (tidak perlu urut dari topik 1), tapi di dalam satu topik, empat tab (Materi -> Eksperimen -> Latihan Soal -> Lab Simulasi) tetap harus dibuka berurutan mengikuti sintaks Inquiry Learning. Guru bisa membagikan **Kode Eksplorasi Bebas** (`TEACHER_UNLOCK_CODE` di `js/config.js`, publik/tidak rahasia) ke siswa yang perlu menjelajah tanpa urutan, misalnya untuk eksplorasi mandiri di rumah.
+**Navigasi bertahap per topik (sintaks PjBL) + konfirmasi guru di titik kritis.** Siswa boleh mulai dari topik mana saja (tidak perlu urut dari topik 1), tapi di dalam satu topik, empat tab (Materi -> Eksperimen -> Latihan Soal -> Lab Simulasi) tetap harus dibuka berurutan - sekarang mengikuti sintaks **Project-Based Learning (PjBL)** (bukan lagi Inquiry Learning), supaya cocok untuk proyek fisika yang berjalan lintas 2-3 pertemuan: Materi = Penentuan Pertanyaan Mendasar & Perencanaan Proyek, Eksperimen = Mendesain Perencanaan Proyek/Menyusun Jadwal/Memonitor Kemajuan, Latihan Soal = Penguatan Konsep, dan Lab Simulasi = Menguji Hasil & Mengevaluasi Pengalaman. Label tahap PjBL ini tampil otomatis di atas tiap tab (lihat `PJBL_STAGE_LABELS` di `js/app.js`).
+
+Supaya "next" antar tab bukan cuma klik kosong, tiap tab sekarang punya **pertanyaan konfirmasi pemahaman** (didefinisikan lewat `topic.materiCheck`/`topic.eksperimenCheck` di `js/content.js`, dinilai otomatis di klien):
+- **Materi -> Eksperimen**: siswa jawab 1 pertanyaan singkat; kalau benar, langsung lanjut - **tanpa** perlu konfirmasi guru.
+- **Eksperimen -> (Latihan Soal + Lab Simulasi)**: siswa jawab 2 pertanyaan tentang hubungan antar-variabel & pengelolaan data eksperimen. Kalau semua benar, permintaan **dikirim ke guru** (lewat mode backend `gate_submit`/`gate_status`) dan siswa menunggu (banner "Menunggu konfirmasi guru..." + polling otomatis tiap ~10 detik). Begitu guru menyetujui dari Panel Guru, **Latihan Soal dan Lab Simulasi Virtual sama-sama terbuka sekaligus** - guru cukup konfirmasi satu kali di titik ini.
+- **Latihan Soal -> Lab Simulasi**: langsung next, tanpa pertanyaan maupun konfirmasi guru sama sekali.
+- **Lab Simulasi (checkpoint kedua/terakhir)**: setelah menghasilkan simulasi, siswa menulis refleksi singkat (validasi apakah simulasinya sesuai konsep fisika topik itu) di bagian bawah tab Lab, lalu kirim untuk konfirmasi guru (mode `gate_submit` juga, stage `lab`) - dipakai guru untuk menandai topik itu benar-benar selesai.
+
+Kalau guru **menolak** salah satu permintaan (lewat Panel Guru), siswa melihat catatan guru (opsional) di banner dan bisa langsung coba lagi (tombol "Coba Lagi" membuka ulang pertanyaan/form refleksinya). Semua status pending/approved/rejected di-cache di `localStorage` supaya UI tidak kosong sebelum polling pertama selesai atau saat offline sebentar.
+
+Guru bisa membagikan **Kode Eksplorasi Bebas** (`TEACHER_UNLOCK_CODE` di `js/config.js`, publik/tidak rahasia) ke siswa yang perlu menjelajah tanpa urutan (dan tanpa gate/konfirmasi guru sama sekali), misalnya untuk eksplorasi mandiri di rumah.
 
 **Prompt lanjutan di Lab Simulasi.** Setelah simulasi pertama jadi, siswa bisa menulis instruksi edit tambahan (mis. "tambahkan grafik kecepatan") yang diterapkan ke kode yang sudah ada, dibatasi maksimal 5 kali edit per simulasi (`MAX_FOLLOWUP_EDITS` di `js/app.js`) - pakai endpoint backend yang sama seperti Generate.
 
@@ -108,6 +125,7 @@ Tiga fitur ini butuh **satu langkah redeploy Apps Script** (lihat Bagian 3) supa
 - Mengganti aktivitas kapan saja (mis. pindah dari Materi ke Eksperimen) - semua siswa yang gabung otomatis ikut pindah dalam ~12 detik (polling, bukan push notification sungguhan) tanpa perlu join ulang.
 - Memantau roster siswa (ID anonim, bukan nama - mis. "Siswa-A3F9", digenerate otomatis per perangkat) beserta aktivitas & waktu lapor terakhirnya, diperbarui otomatis tiap ~8 detik.
 - Mengakhiri sesi - semua siswa otomatis kembali ke mode belajar mandiri (navigasi bertahap per topik seperti biasa).
+- **Konfirmasi Menunggu** (kartu baru): daftar semua siswa yang sudah menjawab benar pertanyaan konfirmasi Eksperimen atau mengirim refleksi Lab Simulasi, lengkap dengan ringkasan/refleksinya, menunggu tombol **Setujui**/**Tolak** dari guru. Diperbarui otomatis bersamaan dengan roster (~8 detik). Menolak akan menampilkan prompt catatan opsional untuk siswa (mis. bagian yang perlu diperbaiki).
 
 Catatan: fitur ini pakai `PropertiesService` bawaan Apps Script sebagai penyimpanan (gratis, tanpa setup tambahan), jadi paling cocok untuk **satu kelas/rombel aktif dalam satu waktu**, bukan banyak kelas paralel dalam skala besar.
 

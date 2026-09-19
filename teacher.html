@@ -128,6 +128,29 @@
     </div>
 
     <div class="teacher-card">
+      <h2 data-i18n="teacher.gate.title">Konfirmasi Menunggu</h2>
+      <p class="muted small" data-i18n="teacher.gate.desc">Siswa yang sudah menjawab benar pertanyaan konfirmasi Eksperimen, atau mengirim refleksi Lab Simulasi, muncul di sini menunggu keputusanmu. Diperbarui otomatis bersamaan dengan Progres Siswa (~8 detik).</p>
+      <div style="overflow-x:auto;">
+        <table class="roster-table">
+          <thead>
+            <tr>
+              <th data-i18n="teacher.gate.th.student">Siswa</th>
+              <th data-i18n="teacher.gate.th.topic">Topik</th>
+              <th data-i18n="teacher.gate.th.stage">Tahap</th>
+              <th data-i18n="teacher.gate.th.summary">Ringkasan/Refleksi Siswa</th>
+              <th data-i18n="teacher.gate.th.submitted">Dikirim</th>
+              <th data-i18n="teacher.gate.th.action">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="gate-pending-body">
+            <tr><td colspan="6" class="muted small" data-i18n="teacher.gate.empty">Tidak ada yang menunggu konfirmasi saat ini.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="teacher-note" id="gate-decide-status"></p>
+    </div>
+
+    <div class="teacher-card">
       <h2 data-i18n="teacher.progress.title">Progres Siswa (real-time)</h2>
       <p class="muted small" data-i18n="teacher.progress.desc">Diperbarui otomatis tiap ~8 detik. ID siswa bersifat anonim (tanpa nama), digenerate otomatis per perangkat.</p>
       <div style="overflow-x:auto;">
@@ -148,6 +171,13 @@
 
 <script src="js/config.js"></script>
 <script src="js/i18n.js"></script>
+<!-- content.js memakai INCLINE_TROLLEY_SIM (didefinisikan di demo-simulations.js)
+     saat menyusun konten Eksperimen topik Kinematics - wajib dimuat SEBELUM
+     content.js di sini juga (bug lama: sebelumnya cuma ada di index.html,
+     jadi content.js selalu gagal di tengah jalan & mematahkan sisa isinya
+     tiap kali teacher.html dibuka - kena dampak juga oleh field materiCheck/
+     eksperimenCheck topik lain yang baru ditambahkan di content.js). -->
+<script src="js/demo-simulations.js"></script>
 <script src="js/content.js"></script>
 <script src="js/teacher.js"></script>
 <script>applyStaticI18n(); initLangSwitch();</script>

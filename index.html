@@ -219,6 +219,7 @@
         <section id="panel-latihan" class="tab-panel"></section>
 
         <section id="panel-lab" class="tab-panel">
+          <p class="pjbl-stage-label" data-i18n="pjbl.stage.lab"></p>
           <p id="lab-key-banner" class="key-banner" hidden>
             <span data-i18n="lab.keybanner.text">Kamu belum memasukkan API key Gemini pribadi, jadi Generate belum bisa jalan.</span>
             <button type="button" id="lab-key-banner-btn" class="btn btn-primary btn-small" data-i18n="lab.keybanner.btn">Atur API Key</button>
@@ -316,6 +317,17 @@
               </div>
             </div>
 
+          </div>
+
+          <div id="lab-gate-banner" class="gate-banner" hidden></div>
+          <div class="lab-card" id="lab-reflection-section">
+            <h3><span class="step-num">4</span> <span data-i18n="lab.reflection.title">Refleksi &amp; Validasi Simulasi (untuk konfirmasi guru)</span></h3>
+            <p class="muted small" data-i18n="lab.reflection.desc">Sebelum topik ini ditandai selesai, jelaskan singkat apakah simulasi yang kamu hasilkan sudah sesuai hukum/konsep fisika topik ini dan bagaimana kamu mengeceknya (misalnya coba nilai ekstrem/nol pada variabelnya).</p>
+            <textarea id="lab-reflection-input" rows="3" data-i18n-placeholder="lab.reflection.placeholder" placeholder="misal: saya coba set arus = 0, gaya pada simulasi juga otomatis jadi 0, sesuai rumus F = BIL..."></textarea>
+            <div class="teacher-actions" style="margin-top:10px;">
+              <button type="button" id="lab-reflection-submit-btn" class="btn btn-primary btn-small" data-i18n="lab.reflection.submitbtn">Kirim untuk Konfirmasi Guru</button>
+            </div>
+            <p class="teacher-note" id="lab-reflection-status"></p>
           </div>
         </section>
       </div>
