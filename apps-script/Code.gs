@@ -103,6 +103,12 @@ const TEACHER_CONTROL_CODE = "koderahasia";
 // lebih lama dari ini (dipakai panel guru untuk menandai status, dan untuk
 // membuang entri roster yang sudah sangat basi).
 const ROSTER_STALE_MS = 5 * 60 * 1000;
+// Permintaan konfirmasi tahap (gate) yang sudah DIPUTUSKAN (disetujui/
+// ditolak) dibuang dari penyimpanan kalau sudah lebih lama dari ini, supaya
+// PropertiesService tidak membengkak tanpa batas. Permintaan yang masih
+// "pending" TIDAK PERNAH dibuang otomatis oleh cutoff ini (harus diputuskan
+// guru dulu), walau sudah menunggu lama.
+const GATE_STALE_MS = 14 * 24 * 60 * 60 * 1000;
 
 // ============================================================
 // Penanganan error Gemini API (ditambahkan 2026-09-07 setelah laporan
@@ -215,6 +221,14 @@ function doPost(e) {
     if (mode === "session_sync") return handleSessionSync(body);
     if (mode === "teacher_session") return handleTeacherSession(body);
     if (mode === "teacher_roster") return handleTeacherRoster(body);
+
+    // Mode "navigasi bertahap PjBL" (konfirmasi tahap Eksperimen & Lab
+    // Simulasi) - sama seperti sesi kelas di atas, ini murni koordinasi
+    // status kemajuan siswa per topik, disimpan di PropertiesService, TIDAK
+    // butuh API key Gemini sama sekali.
+    if (mode === "gate_submit") return handleGateSubmit(body);
+    if (mode === "gate_status") return handleGateStatus(body);
+    if (mode === "teacher_gate_decide") return handleTeacherGateDecide(body);
 
     // Mode lain (chat, simulate) benar-benar memanggil Gemini API, jadi
     // butuh API key Gemini milik pengguna sendiri (lihat catatan arsitektur
@@ -601,7 +615,162 @@ function handleTeacherRoster(body) {
   }
   const state = readSessionState();
   const roster = readRoster();
-  return jsonResponse({ state: publicSessionState(state), roster: roster, serverNow: Date.now() });
+  // Sekalian sertakan daftar konfirmasi tahap (gate) yang masih menunggu
+  // keputusan guru, supaya Panel Guru cukup satu polling (~8 detik, sama
+  // seperti roster) untuk menampilkan keduanya.
+  const reqs = cleanupGateRequests(readGateRequests());
+  writeGateRequests(reqs);
+  const gatePending = [];
+  Object.keys(reqs).forEach(function (key) {
+    const r = reqs[key];
+    if (!r) return;
+    ["eksperimen", "lab"].forEach(function (stage) {
+      const st = r[stage];
+      if (st && st.status === "pending") {
+        gatePending.push({
+          studentId: r.studentId, topicId: r.topicId, stage: stage,
+          submittedAt: st.submittedAt, summary: st.summary || ""
+        });
+      }
+    });
+  });
+  gatePending.sort(function (a, b) { return (a.submittedAt || 0) - (b.submittedAt || 0); });
+  return jsonResponse({ state: publicSessionState(state), roster: roster, serverNow: Date.now(), gatePending: gatePending });
+}
+
+/* ============================================================
+   Konfirmasi tahap (Gate) - navigasi PjBL per topik
+   ------------------------------------------------------------
+   Sebagian tab (Eksperimen, Lab Simulasi Virtual) butuh konfirmasi
+   guru secara eksplisit sebelum siswa boleh lanjut/dianggap selesai
+   (checkpoint "Memonitor Peserta Didik dan Kemajuan Proyek" pada
+   sintaks PjBL) - cocok untuk proyek yang berjalan lintas 2-3
+   pertemuan, bukan hanya satu sesi. Tab Materi dan Latihan Soal
+   TIDAK butuh konfirmasi guru (cukup pertanyaan pemahaman mandiri
+   yang dinilai otomatis di sisi klien).
+
+   gate_requests (properti tunggal): {
+     "<topicId>::<studentId>": {
+       studentId, topicId,
+       eksperimen: { status: "pending"|"approved"|"rejected", submittedAt,
+                     decidedAt, note, summary } | tidak ada,
+       lab: { ...struktur sama... } | tidak ada,
+       updatedAt (ms)
+     }, ...
+   }
+   ============================================================ */
+function readGateRequests() {
+  const raw = PropertiesService.getScriptProperties().getProperty("gate_requests");
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === "object") ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+function writeGateRequests(reqs) {
+  PropertiesService.getScriptProperties().setProperty("gate_requests", JSON.stringify(reqs));
+}
+function gateKey(topicId, studentId) {
+  return (topicId || "") + "::" + (studentId || "");
+}
+function cleanupGateRequests(reqs) {
+  const cutoff = Date.now() - GATE_STALE_MS;
+  Object.keys(reqs).forEach(function (key) {
+    const r = reqs[key];
+    if (!r) { delete reqs[key]; return; }
+    const stillRelevant = ["eksperimen", "lab"].some(function (stage) {
+      const st = r[stage];
+      return st && (st.status === "pending" || (st.decidedAt || 0) >= cutoff);
+    });
+    if (!stillRelevant) delete reqs[key];
+  });
+  return reqs;
+}
+
+// mode "gate_submit": siswa berhasil menjawab pertanyaan konfirmasi tahap
+// Eksperimen (auto-graded di klien), atau mengirim refleksi validasi tahap
+// Lab Simulasi - keduanya jadi permintaan yang MENUNGGU keputusan guru.
+function handleGateSubmit(body) {
+  const topicId = (body.topicId || "").toString().slice(0, 60);
+  const studentId = (body.studentId || "").toString().slice(0, 80);
+  const stage = (body.stage || "").toString();
+  if (!topicId || !studentId || (stage !== "eksperimen" && stage !== "lab")) {
+    return jsonResponse({ error: "Data konfirmasi tidak lengkap." });
+  }
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(5000);
+    const reqs = cleanupGateRequests(readGateRequests());
+    const key = gateKey(topicId, studentId);
+    const entry = reqs[key] || { studentId: studentId, topicId: topicId };
+    entry[stage] = {
+      status: "pending",
+      submittedAt: Date.now(),
+      decidedAt: null,
+      note: "",
+      summary: (body.summary || "").toString().slice(0, 600)
+    };
+    entry.updatedAt = Date.now();
+    reqs[key] = entry;
+    writeGateRequests(reqs);
+  } catch (e) {
+    return jsonResponse({ error: "Server sedang sibuk, coba kirim lagi sebentar lagi." });
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+  return jsonResponse({ ok: true });
+}
+
+// mode "gate_status": siswa polling status keputusan guru untuk topik ini
+// (dipanggil berkala selama ada yang masih pending, dan sekali setiap buka
+// topik supaya keputusan yang terjadi saat siswa offline tetap tersinkron).
+function handleGateStatus(body) {
+  const topicId = (body.topicId || "").toString().slice(0, 60);
+  const studentId = (body.studentId || "").toString().slice(0, 80);
+  const reqs = readGateRequests();
+  const entry = reqs[gateKey(topicId, studentId)];
+  if (!entry) return jsonResponse({ eksperimen: null, lab: null });
+  return jsonResponse({ eksperimen: entry.eksperimen || null, lab: entry.lab || null });
+}
+
+// mode "teacher_gate_decide": guru menyetujui/menolak satu permintaan yang
+// tampil di Panel Guru.
+function handleTeacherGateDecide(body) {
+  if (!requireTeacherControlCode(body)) {
+    return jsonResponse({ error: "Kode kontrol guru salah atau belum diisi." });
+  }
+  const topicId = (body.topicId || "").toString().slice(0, 60);
+  const studentId = (body.studentId || "").toString().slice(0, 80);
+  const stage = (body.stage || "").toString();
+  const decision = (body.decision || "").toString();
+  const note = (body.note || "").toString().slice(0, 300);
+  if (!topicId || !studentId || (stage !== "eksperimen" && stage !== "lab") ||
+      (decision !== "approved" && decision !== "rejected")) {
+    return jsonResponse({ error: "Data keputusan tidak lengkap." });
+  }
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(5000);
+    const reqs = readGateRequests();
+    const key = gateKey(topicId, studentId);
+    const entry = reqs[key];
+    if (!entry || !entry[stage] || entry[stage].status !== "pending") {
+      return jsonResponse({ error: "Permintaan tidak ditemukan atau sudah diproses sebelumnya." });
+    }
+    entry[stage].status = decision;
+    entry[stage].decidedAt = Date.now();
+    entry[stage].note = note;
+    entry.updatedAt = Date.now();
+    reqs[key] = entry;
+    writeGateRequests(reqs);
+  } catch (e) {
+    return jsonResponse({ error: "Server sedang sibuk, coba lagi sebentar lagi." });
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+  return jsonResponse({ ok: true });
 }
 
 function generateSessionCode() {
