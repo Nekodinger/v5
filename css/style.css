@@ -623,7 +623,7 @@ body.nav-pinned .topic-nav {
   margin-bottom: 12px;
 }
 .prompt-form select, .prompt-form input[type=text], .prompt-form textarea,
-#final-prompt, #backend-url-input, #settings-key-input, .code-editor {
+#final-prompt, #backend-url-input, #settings-key-input, #lab-reflection-input, .code-editor {
   width: 100%;
   margin-top: 5px;
   background: var(--bg);
@@ -635,10 +635,11 @@ body.nav-pinned .topic-nav {
   font-family: inherit;
 }
 .prompt-form select:focus, .prompt-form input:focus, .prompt-form textarea:focus,
-#final-prompt:focus, #backend-url-input:focus, #settings-key-input:focus, .code-editor:focus {
+#final-prompt:focus, #backend-url-input:focus, #settings-key-input:focus, #lab-reflection-input:focus, .code-editor:focus {
   outline: none;
   border-color: var(--accent);
 }
+#lab-reflection-input { resize: vertical; }
 #final-prompt { font-family: inherit; }
 .code-editor { font-family: "Fira Code", Consolas, monospace; font-size: 0.8rem; height: 320px; margin-top: 10px; }
 
@@ -718,6 +719,64 @@ body.nav-pinned .topic-nav {
 .icon-btn svg { width: 18px; height: 18px; }
 .modal-box label { display: block; font-size: 0.85rem; color: var(--muted); margin: 14px 0 6px; }
 .modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+#confirm-modal .modal-box { max-width: 560px; max-height: 82vh; overflow-y: auto; }
+
+/* ---------------- Konfirmasi pemahaman (gate) & framing PjBL ---------------- */
+.pjbl-stage-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  display: inline-block;
+  margin: 0 0 14px;
+}
+.question-card {
+  background: var(--panel-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.question-card:last-child { margin-bottom: 0; }
+.q-title { font-weight: 700; font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; }
+.options-input { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.option-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.88rem;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.option-radio:hover { background: var(--panel-hover); }
+.option-radio input { margin-top: 3px; flex: none; }
+.confirm-feedback { margin: 8px 0 0; }
+.confirm-feedback.ok { color: var(--good); }
+.confirm-feedback.warn { color: var(--warn); }
+
+.gate-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+.gate-banner-icon { flex: none; }
+.gate-pending { background: var(--warn-soft); color: var(--warn); }
+.gate-approved { background: var(--good-soft); color: var(--good); }
+.gate-rejected { background: rgba(220,38,38,0.10); color: var(--danger); }
+.gate-retry-btn { margin-top: 8px; }
+
+/* Kartu & tombol gaya "panel guru" yang dipakai juga di index.html (mis.
+   refleksi Lab) - definisi lengkap (warna dsb) sudah ada di sini supaya
+   tidak perlu duplikasi <style> inline seperti di teacher.html. */
+.teacher-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.teacher-note { font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
 
 .advanced-settings { margin-top: 16px; }
 .advanced-settings summary {
