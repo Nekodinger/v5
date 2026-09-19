@@ -300,7 +300,73 @@ const I18N_STRINGS = {
   "teacher.login.checking": { id: "Memeriksa...", en: "Checking..." },
   "teacher.session.starting": { id: "Memulai sesi...", en: "Starting session..." },
   "teacher.session.applying": { id: "Menerapkan...", en: "Applying..." },
-  "teacher.session.ending": { id: "Mengakhiri sesi...", en: "Ending session..." }
+  "teacher.session.ending": { id: "Mengakhiri sesi...", en: "Ending session..." },
+
+  /* ---------------- Tahap PjBL (subjudul di atas tiap panel tab) ---------------- */
+  "pjbl.stage.materi": { id: "Tahap PjBL: Penentuan Pertanyaan Mendasar &amp; Perencanaan Proyek", en: "PjBL Stage: Essential Question &amp; Project Planning" },
+  "pjbl.stage.eksperimen": { id: "Tahap PjBL: Mendesain Perencanaan Proyek, Menyusun Jadwal, &amp; Memonitor Kemajuan (perlu konfirmasi guru)", en: "PjBL Stage: Designing the Project Plan, Scheduling, &amp; Monitoring Progress (needs teacher confirmation)" },
+  "pjbl.stage.latihan": { id: "Tahap PjBL: Penguatan Konsep (checkpoint formatif mandiri)", en: "PjBL Stage: Concept Reinforcement (self-checked formative checkpoint)" },
+  "pjbl.stage.lab": { id: "Tahap PjBL: Menguji Hasil &amp; Mengevaluasi Pengalaman (perlu konfirmasi guru untuk menandai topik selesai)", en: "PjBL Stage: Testing the Outcome &amp; Evaluating the Experience (needs teacher confirmation to mark the topic complete)" },
+
+  /* ---------------- Modal konfirmasi pemahaman (generik) ---------------- */
+  "confirm.checkbtn": { id: "Periksa Jawaban", en: "Check Answers" },
+  "confirm.pickanswer": { id: "Pilih salah satu jawaban dulu.", en: "Please pick an answer first." },
+  "confirm.correct": { id: "Benar!", en: "Correct!" },
+  "confirm.wrong": { id: "Kurang tepat, coba lagi.", en: "Not quite, try again." },
+  "confirm.tryagain": { id: "Masih ada jawaban yang kurang tepat - lihat penjelasan di tiap soal, lalu coba lagi.", en: "Some answers aren't quite right yet - check the explanation on each question, then try again." },
+  "confirm.generic.label": { id: "Saya sudah membaca/mengerjakan bagian ini dan siap melanjutkan.", en: "I have read/completed this section and I'm ready to continue." },
+  "confirm.generic.needcheck": { id: "Centang dulu kotak konfirmasi di atas.", en: "Please check the confirmation box above first." },
+
+  /* ---------------- Gate Materi (self-check, tanpa guru) ---------------- */
+  "gate.materi.title": { id: "Konfirmasi Pemahaman: Materi", en: "Understanding Check: Learning Material" },
+  "gate.materi.desc": { id: "Jawab pertanyaan singkat ini untuk membuka tab Eksperimen.", en: "Answer this short question to unlock the Experiment tab." },
+  "gate.materi.fallback": { id: "Saya sudah membaca dan memahami materi topik ini.", en: "I have read and understood this topic's material." },
+
+  /* ---------------- Gate Eksperimen (self-check + konfirmasi guru) ---------------- */
+  "gate.eksperimen.title": { id: "Konfirmasi Pemahaman: Eksperimen", en: "Understanding Check: Experiment" },
+  "gate.eksperimen.desc": { id: "Jawab pertanyaan tentang hubungan antar-variabel &amp; pengelolaan data pada eksperimen ini. Kalau semua benar, permintaanmu dikirim ke guru untuk dikonfirmasi sebelum Latihan Soal dan Lab Simulasi Virtual terbuka.", en: "Answer these questions about the relationship between variables and data handling in this experiment. If all correct, your request is sent to your teacher for confirmation before Practice Questions and the Virtual Simulation Lab unlock." },
+  "gate.eksperimen.fallback": { id: "Saya sudah menyelesaikan eksperimen ini dan siap dikonfirmasi guru.", en: "I have completed this experiment and I'm ready for teacher confirmation." },
+  "gate.eksperimen.submitbtn": { id: "Periksa &amp; Kirim ke Guru", en: "Check &amp; Send to Teacher" },
+  "gate.eksperimen.autosummary": { id: "Siswa menjawab benar semua pertanyaan konfirmasi Eksperimen.", en: "Student answered all Experiment confirmation questions correctly." },
+
+  /* ---------------- Gate Lab Simulasi (refleksi + konfirmasi guru) ---------------- */
+  "lab.reflection.title": { id: "Refleksi &amp; Validasi Simulasi (untuk konfirmasi guru)", en: "Reflection &amp; Simulation Validation (for teacher confirmation)" },
+  "lab.reflection.desc": { id: "Sebelum topik ini ditandai selesai, jelaskan singkat apakah simulasi yang kamu hasilkan sudah sesuai hukum/konsep fisika topik ini dan bagaimana kamu mengeceknya (misalnya coba nilai ekstrem/nol pada variabelnya).", en: "Before this topic is marked complete, briefly explain whether the simulation you produced matches this topic's physics laws/concepts and how you checked it (e.g. trying extreme/zero values for its variables)." },
+  "lab.reflection.placeholder": { id: "misal: saya coba set arus = 0, gaya pada simulasi juga otomatis jadi 0, sesuai rumus F = BIL...", en: "e.g. I tried setting current = 0, and the force in the simulation also became 0, matching F = BIL..." },
+  "lab.reflection.submitbtn": { id: "Kirim untuk Konfirmasi Guru", en: "Send for Teacher Confirmation" },
+  "gate.lab.reflection.tooShort": { id: "Tulis refleksi yang sedikit lebih lengkap dulu (minimal beberapa kalimat).", en: "Please write a slightly more complete reflection first (at least a couple of sentences)." },
+
+  /* ---------------- Notifikasi & banner status gate (siswa) ---------------- */
+  "gate.submitted.toast": { id: "Terkirim! Menunggu konfirmasi guru.", en: "Sent! Waiting for teacher confirmation." },
+  "gate.eksperimen.approved.toast": { id: "Guru sudah mengonfirmasi Eksperimen-mu! Latihan Soal &amp; Lab Simulasi kini terbuka.", en: "Your teacher confirmed your Experiment! Practice Questions &amp; the Simulation Lab are now unlocked." },
+  "gate.lab.approved.toast": { id: "Guru sudah mengonfirmasi simulasimu - topik ini ditandai selesai!", en: "Your teacher confirmed your simulation - this topic is now marked complete!" },
+  "gate.eksperimen.rejected.toast": { id: "Guru meminta kamu memperbaiki/mengulang bagian Eksperimen. Lihat catatan guru di bawah.", en: "Your teacher asked you to redo/fix the Experiment part. See the teacher's note below." },
+  "gate.lab.rejected.toast": { id: "Guru meminta kamu memperbaiki simulasi/refleksimu. Lihat catatan guru di bawah.", en: "Your teacher asked you to improve your simulation/reflection. See the teacher's note below." },
+  "gate.banner.pending.eksperimen": { id: "Menunggu konfirmasi guru untuk bagian Eksperimen...", en: "Waiting for teacher confirmation on the Experiment part..." },
+  "gate.banner.pending.lab": { id: "Menunggu konfirmasi guru untuk refleksi &amp; simulasi ini...", en: "Waiting for teacher confirmation on this reflection &amp; simulation..." },
+  "gate.banner.approved.eksperimen": { id: "Dikonfirmasi guru - Latihan Soal &amp; Lab Simulasi Virtual terbuka.", en: "Confirmed by teacher - Practice Questions &amp; Virtual Simulation Lab are unlocked." },
+  "gate.banner.approved.lab": { id: "Dikonfirmasi guru - topik ini selesai.", en: "Confirmed by teacher - this topic is complete." },
+  "gate.banner.rejected.eksperimen": { id: "Guru meminta bagian Eksperimen diperbaiki/diulang.", en: "Teacher asked for the Experiment part to be redone/fixed." },
+  "gate.banner.rejected.lab": { id: "Guru meminta simulasi/refleksi ini diperbaiki.", en: "Teacher asked for this simulation/reflection to be improved." },
+  "gate.banner.notefromteacher": { id: "Catatan guru", en: "Teacher's note" },
+  "gate.banner.retrybtn": { id: "Coba Lagi", en: "Try Again" },
+
+  /* ---------------- Panel Guru: Konfirmasi Menunggu ---------------- */
+  "teacher.gate.title": { id: "Konfirmasi Menunggu", en: "Pending Confirmations" },
+  "teacher.gate.desc": { id: "Siswa yang sudah menjawab benar pertanyaan konfirmasi Eksperimen, atau mengirim refleksi Lab Simulasi, muncul di sini menunggu keputusanmu. Diperbarui otomatis bersamaan dengan Progres Siswa (~8 detik).", en: "Students who answered the Experiment confirmation questions correctly, or submitted a Simulation Lab reflection, appear here waiting for your decision. Updates automatically together with Student Progress (~8s)." },
+  "teacher.gate.empty": { id: "Tidak ada yang menunggu konfirmasi saat ini.", en: "No one is waiting for confirmation right now." },
+  "teacher.gate.stage.eksperimen": { id: "Eksperimen", en: "Experiment" },
+  "teacher.gate.stage.lab": { id: "Lab Simulasi", en: "Simulation Lab" },
+  "teacher.gate.approve.btn": { id: "Setujui", en: "Approve" },
+  "teacher.gate.reject.btn": { id: "Tolak", en: "Reject" },
+  "teacher.gate.reject.prompt": { id: "Catatan untuk siswa (opsional, kosongkan kalau tidak perlu):", en: "Note for the student (optional, leave blank if not needed):" },
+  "teacher.gate.deciding": { id: "Menyimpan keputusan...", en: "Saving decision..." },
+  "teacher.gate.th.student": { id: "Siswa", en: "Student" },
+  "teacher.gate.th.topic": { id: "Topik", en: "Topic" },
+  "teacher.gate.th.stage": { id: "Tahap", en: "Stage" },
+  "teacher.gate.th.summary": { id: "Ringkasan/Refleksi Siswa", en: "Student Summary/Reflection" },
+  "teacher.gate.th.submitted": { id: "Dikirim", en: "Submitted" },
+  "teacher.gate.th.action": { id: "Aksi", en: "Action" }
 };
 
 function getLang() {

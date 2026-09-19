@@ -114,6 +114,57 @@ function renderRoster(roster, serverNow) {
   countEl.textContent = t("teacher.roster.count", { total: ids.length, online: onlineCount });
 }
 
+function stageLabel(stage) {
+  return stage === "eksperimen" ? t("teacher.gate.stage.eksperimen") : t("teacher.gate.stage.lab");
+}
+function renderGatePending(gatePending) {
+  const body = document.getElementById("gate-pending-body");
+  const list = gatePending || [];
+  if (list.length === 0) {
+    body.innerHTML = `<tr><td colspan="6" class="muted small">${t("teacher.gate.empty")}</td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map((req, i) => {
+    const rowId = `gate-row-${i}`;
+    return `<tr id="${rowId}">
+      <td>${req.studentId}</td>
+      <td>${topicTitle(req.topicId)}</td>
+      <td>${stageLabel(req.stage)}</td>
+      <td class="small" style="max-width:260px; white-space:pre-wrap;">${(req.summary || "").replace(/</g, "&lt;")}</td>
+      <td><span class="status-dot ${statusClass(req.submittedAt)}"></span>${relativeTime(req.submittedAt)}</td>
+      <td>
+        <div class="teacher-actions">
+          <button type="button" class="btn btn-primary btn-small gate-approve-btn" data-idx="${i}" data-i18n="teacher.gate.approve.btn">Setujui</button>
+          <button type="button" class="btn btn-secondary btn-small gate-reject-btn" data-idx="${i}" data-i18n="teacher.gate.reject.btn">Tolak</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+  applyStaticI18n(body);
+
+  body.querySelectorAll(".gate-approve-btn").forEach(btn => {
+    btn.addEventListener("click", () => decideGate(list[parseInt(btn.dataset.idx, 10)], "approved", ""));
+  });
+  body.querySelectorAll(".gate-reject-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const note = window.prompt(t("teacher.gate.reject.prompt"), "") || "";
+      decideGate(list[parseInt(btn.dataset.idx, 10)], "rejected", note);
+    });
+  });
+}
+async function decideGate(req, decision, note) {
+  if (!req) return;
+  const statusEl = document.getElementById("gate-decide-status");
+  statusEl.textContent = t("teacher.gate.deciding");
+  const data = await callBackend({
+    mode: "teacher_gate_decide", controlCode: getControlCode(),
+    topicId: req.topicId, studentId: req.studentId, stage: req.stage, decision, note
+  });
+  if (data.error) { statusEl.textContent = data.error; return; }
+  statusEl.textContent = "";
+  pollRoster();
+}
+
 async function pollRoster() {
   const data = await callBackend({ mode: "teacher_roster", controlCode: getControlCode() });
   if (data.error) {
@@ -122,6 +173,7 @@ async function pollRoster() {
   }
   renderSessionUI(data.state);
   renderRoster(data.roster, data.serverNow);
+  renderGatePending(data.gatePending);
 }
 function startRosterPolling() {
   stopRosterPolling();

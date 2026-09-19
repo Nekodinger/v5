@@ -100,6 +100,51 @@ function mediaRow(image, video) {
 }
 
 /* ------------------------------------------------------------
+   Pertanyaan Konfirmasi Pemahaman (navigasi bertahap PjBL)
+   ------------------------------------------------------------
+   Dipakai gate progresi tab per topik (lihat app.js, fungsi
+   openConfirmModal/dsb.):
+   - topic.materiCheck   : SATU soal MCQ (pemahaman umum materi),
+                           dinilai otomatis di klien, TANPA konfirmasi
+                           guru - lulus di sini langsung membuka tab
+                           Eksperimen.
+   - topic.eksperimenCheck : 2 SOAL MCQ tentang hubungan antar-variabel
+                           & pengelolaan data pada eksperimen topik ini,
+                           dinilai otomatis di klien. Kalau BENAR SEMUA,
+                           status dikirim ke guru ("menunggu konfirmasi")
+                           - siswa baru boleh lanjut ke Latihan Soal DAN
+                           Lab Simulasi Virtual setelah guru menyetujui
+                           dari Panel Guru (checkpoint "Memonitor Peserta
+                           Didik dan Kemajuan Proyek" pada sintaks PjBL).
+   Format tiap soal (array id sejajar dengan array en, index sama):
+     { question: "...", options: ["...", "...", "...", "..."],
+       correct: <index 0-based>, explanation: "..." }
+   mapCheckQuestions() di bawah menggabungkan versi ID+EN jadi bentuk
+   bilingual {id,en} yang dibaca trContent(), sama seperti pola
+   topic.latihan.
+   Topik yang BELUM diisi materiCheck/eksperimenCheck (mis. topik baru
+   yang baru dibuat "ready" tapi belum sempat diisi soal konfirmasi)
+   otomatis jatuh ke konfirmasi generik (lihat FALLBACK di app.js) -
+   tidak menyebabkan error atau siswa terjebak.
+   ------------------------------------------------------------ */
+function mapCheckQuestions(idArr, enArr) {
+  if (!idArr || !idArr.length) return null;
+  return idArr.map((q, i) => {
+    const qEN = (enArr && enArr[i]) || {};
+    return {
+      question: { id: q.question, en: qEN.question },
+      options: q.options.map((opt, j) => ({ id: opt, en: (qEN.options || [])[j] })),
+      correct: q.correct,
+      explanation: { id: q.explanation, en: qEN.explanation }
+    };
+  });
+}
+function mapSingleCheck(idArr, enArr) {
+  const mapped = mapCheckQuestions(idArr, enArr);
+  return mapped ? mapped[0] : null;
+}
+
+/* ------------------------------------------------------------
    Konten lengkap: KINEMATICS (topik pilot)
    ------------------------------------------------------------ */
 
@@ -754,6 +799,33 @@ const KINEMATICS_LAB_CONCEPTS_EN = [
   "Other (write your own in the additional instructions)"
 ];
 
+const KINEMATICS_MATERI_CHECK = [
+  { question: "Sebuah benda bergerak lurus berubah beraturan (GLBB) dari keadaan diam. Besaran apa yang ditunjukkan oleh GRADIEN grafik kecepatan (v) terhadap waktu (t)?",
+    options: ["Jarak tempuh", "Percepatan", "Kecepatan rata-rata", "Perpindahan"], correct: 1,
+    explanation: "Gradien grafik v-t adalah Δv/Δt, yaitu definisi percepatan." }
+];
+const KINEMATICS_MATERI_CHECK_EN = [
+  { question: "An object moves with uniform acceleration (constant a) starting from rest. What quantity is shown by the GRADIENT of a velocity (v) vs time (t) graph?",
+    options: ["Distance travelled", "Acceleration", "Average velocity", "Displacement"],
+    explanation: "The gradient of a v-t graph is Δv/Δt, which is the definition of acceleration." }
+];
+const KINEMATICS_EKSPERIMEN_CHECK = [
+  { question: "Pada eksperimen troli di bidang miring ini, GRADIEN grafik v-t (dari analisis pita ketik) mewakili besaran...",
+    options: ["Percepatan troli", "Sudut kemiringan bidang", "Gaya gesek troli", "Massa troli"], correct: 0,
+    explanation: "Karena troli mengalami GLBB, gradien grafik v-t = percepatan (a = Δv/Δt)." },
+  { question: "Mengapa titik-titik pertama pada pita ketik biasanya TIDAK dipakai dalam analisis data?",
+    options: ["Karena titik tersebut salah dicetak", "Karena troli belum bergerak dengan kecepatan yang stabil di titik-titik awal itu", "Karena pewaktu ketik belum menyala", "Karena jaraknya terlalu jauh untuk diukur"], correct: 1,
+    explanation: "Di awal pelepasan, gerak troli belum teratur/stabil, sehingga interval jarak antar titik pertama belum konsisten dan sebaiknya diabaikan." }
+];
+const KINEMATICS_EKSPERIMEN_CHECK_EN = [
+  { question: "In this trolley-on-a-ramp experiment, the GRADIENT of the v-t graph (from ticker-tape analysis) represents...",
+    options: ["The trolley's acceleration", "The ramp's angle of incline", "The trolley's friction force", "The trolley's mass"],
+    explanation: "Since the trolley undergoes uniform acceleration, the gradient of the v-t graph = acceleration (a = Δv/Δt)." },
+  { question: "Why are the first few dots on the ticker-tape usually NOT used in the data analysis?",
+    options: ["Because those dots were printed incorrectly", "Because the trolley's motion is not yet steady at those first dots", "Because the ticker-timer had not switched on yet", "Because the spacing is too far to measure"],
+    explanation: "Right after release, the trolley's motion is not yet regular/steady, so the spacing between the first dots is not yet consistent and should be ignored." }
+];
+
 (function attachKinematicsContent() {
   const topic = TOPICS.find(t => t.id === "kinematics");
   topic.desc = { id: topic.desc, en: KINEMATICS_DESC_EN };
@@ -774,6 +846,8 @@ const KINEMATICS_LAB_CONCEPTS_EN = [
   });
   topic.labConcepts = KINEMATICS_LAB_CONCEPTS.map((c, i) => ({ id: c, en: KINEMATICS_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: KINEMATICS_FORMULA_SHEET, en: KINEMATICS_FORMULA_SHEET_EN };
+  topic.materiCheck = mapSingleCheck(KINEMATICS_MATERI_CHECK, KINEMATICS_MATERI_CHECK_EN);
+  topic.eksperimenCheck = mapCheckQuestions(KINEMATICS_EKSPERIMEN_CHECK, KINEMATICS_EKSPERIMEN_CHECK_EN);
 })();
 
 /* ------------------------------------------------------------
@@ -1418,6 +1492,33 @@ const MAGNETIC_LAB_CONCEPTS_EN = [
   "Other (write your own in the additional instructions)"
 ];
 
+const MAGNETIC_MATERI_CHECK = [
+  { question: "Kaidah tangan kanan (right-hand grip rule) pada kawat berarus digunakan untuk menentukan...",
+    options: ["Besar gaya magnetik", "Arah medan magnet di sekitar kawat", "Massa jenis kawat", "Hambatan kawat"], correct: 1,
+    explanation: "Kaidah tangan kanan hanya menentukan ARAH medan magnet; besarnya dihitung dari rumus terpisah." }
+];
+const MAGNETIC_MATERI_CHECK_EN = [
+  { question: "The right-hand grip rule for a current-carrying wire is used to determine...",
+    options: ["The magnitude of the magnetic force", "The direction of the magnetic field around the wire", "The wire's density", "The wire's resistance"],
+    explanation: "The right-hand grip rule only gives the DIRECTION of the magnetic field; its magnitude comes from a separate formula." }
+];
+const MAGNETIC_EKSPERIMEN_CHECK = [
+  { question: "Pada eksperimen Neraca Arus ini, grafik gaya F terhadap arus I berbentuk garis lurus melalui titik asal. Apa makna GRADIEN grafik tersebut?",
+    options: ["BL (rapat fluks magnetik dikali panjang kawat dalam medan)", "Hanya B (rapat fluks magnetik) saja", "Hanya L (panjang kawat) saja", "Massa neraca timbang"], correct: 0,
+    explanation: "Karena F = BIL, grafik F terhadap I punya gradien BL; B baru didapat setelah gradien dibagi L." },
+  { question: "Perubahan massa terbaca (Δm) pada neraca timbang elektronik digunakan untuk menghitung besaran apa pada eksperimen ini?",
+    options: ["Arus listrik I", "Gaya magnetik F (lewat F = Δm × g)", "Panjang kawat L", "Hambatan kawat"], correct: 1,
+    explanation: "Gaya reaksi pada magnet terbaca sebagai perubahan massa di neraca, dihitung F = Δm × g." }
+];
+const MAGNETIC_EKSPERIMEN_CHECK_EN = [
+  { question: "In this Current Balance experiment, the graph of force F against current I is a straight line through the origin. What does the GRADIENT of that graph represent?",
+    options: ["BL (magnetic flux density times the wire length in the field)", "B (magnetic flux density) alone", "L (wire length) alone", "The balance's mass reading"],
+    explanation: "Since F = BIL, the F-I graph has gradient BL; B is only obtained after dividing the gradient by L." },
+  { question: "The change in reading (Δm) on the electronic balance is used to calculate which quantity in this experiment?",
+    options: ["The current I", "The magnetic force F (via F = Δm × g)", "The wire length L", "The wire's resistance"],
+    explanation: "The reaction force on the magnet is read as a change in balance reading, calculated as F = Δm × g." }
+];
+
 (function attachMagneticFieldsContent() {
   const topic = TOPICS.find(t => t.id === "magnetic-fields");
   topic.desc = { id: topic.desc, en: MAGNETIC_DESC_EN };
@@ -1437,6 +1538,8 @@ const MAGNETIC_LAB_CONCEPTS_EN = [
   });
   topic.labConcepts = MAGNETIC_LAB_CONCEPTS.map((c, i) => ({ id: c, en: MAGNETIC_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: MAGNETIC_FORMULA_SHEET, en: MAGNETIC_FORMULA_SHEET_EN };
+  topic.materiCheck = mapSingleCheck(MAGNETIC_MATERI_CHECK, MAGNETIC_MATERI_CHECK_EN);
+  topic.eksperimenCheck = mapCheckQuestions(MAGNETIC_EKSPERIMEN_CHECK, MAGNETIC_EKSPERIMEN_CHECK_EN);
 })();
 
 /* ------------------------------------------------------------
@@ -2294,6 +2397,33 @@ const TEMPERATURE_LAB_CONCEPTS_EN = [
   "Other (write your own in additional instructions)"
 ];
 
+const TEMPERATURE_MATERI_CHECK = [
+  { question: "Satuan SI untuk kapasitas kalor jenis (specific heat capacity) adalah...",
+    options: ["J kg⁻¹", "J kg⁻¹ K⁻¹", "J K⁻¹", "Watt"], correct: 1,
+    explanation: "Kapasitas kalor jenis c didefinisikan dari E = mcΔθ, sehingga satuannya J kg⁻¹ K⁻¹." }
+];
+const TEMPERATURE_MATERI_CHECK_EN = [
+  { question: "The SI unit for specific heat capacity is...",
+    options: ["J kg⁻¹", "J kg⁻¹ K⁻¹", "J K⁻¹", "Watt"],
+    explanation: "Specific heat capacity c is defined from E = mcΔθ, so its unit is J kg⁻¹ K⁻¹." }
+];
+const TEMPERATURE_EKSPERIMEN_CHECK = [
+  { question: "Pada eksperimen ini, energi listrik dihitung dengan E = VIt. Untuk menentukan kapasitas kalor jenis c aluminium, energi ini dibagi dengan...",
+    options: ["Massa balok saja (m)", "Hasil kali massa balok dan kenaikan suhu (mΔθ)", "Waktu pemanasan saja (t)", "Tegangan V saja"], correct: 1,
+    explanation: "Dari E = mcΔθ, maka c = E/(mΔθ) - energi dibagi hasil kali massa dan kenaikan suhu." },
+  { question: "Nilai kapasitas kalor jenis c hasil eksperimen biasanya sedikit LEBIH BESAR daripada nilai referensi. Apa penyebab utamanya?",
+    options: ["Alat ukur tegangan selalu salah", "Sebagian kalor hilang ke lingkungan, padahal rumus menganggap semua energi masuk ke balok", "Aluminium menyusut saat dipanaskan", "Arus listrik selalu lebih kecil dari yang terbaca"], correct: 1,
+    explanation: "Balok tidak sempurna terisolasi, sehingga sebagian energi listrik hilang ke sekitar, membuat c hitung tampak lebih besar." }
+];
+const TEMPERATURE_EKSPERIMEN_CHECK_EN = [
+  { question: "In this experiment, electrical energy is calculated as E = VIt. To find aluminium's specific heat capacity c, this energy is divided by...",
+    options: ["The block's mass alone (m)", "The product of the block's mass and temperature rise (mΔθ)", "The heating time alone (t)", "The voltage V alone"],
+    explanation: "From E = mcΔθ, c = E/(mΔθ) - energy divided by the product of mass and temperature rise." },
+  { question: "The experimentally calculated specific heat capacity c is usually slightly HIGHER than the reference value. What is the main reason?",
+    options: ["The voltmeter is always wrong", "Some heat is lost to the surroundings, but the formula assumes all energy enters the block", "Aluminium shrinks when heated", "The current is always smaller than what is read"],
+    explanation: "The block is not perfectly insulated, so some electrical energy is lost to the surroundings, making the calculated c appear larger." }
+];
+
 (function attachTemperatureContent() {
   const topic = TOPICS.find(t => t.id === "temperature");
   topic.desc = { id: topic.desc, en: TEMPERATURE_DESC_EN };
@@ -2313,6 +2443,8 @@ const TEMPERATURE_LAB_CONCEPTS_EN = [
   });
   topic.labConcepts = TEMPERATURE_LAB_CONCEPTS.map((c, i) => ({ id: c, en: TEMPERATURE_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: TEMPERATURE_FORMULA_SHEET, en: TEMPERATURE_FORMULA_SHEET_EN };
+  topic.materiCheck = mapSingleCheck(TEMPERATURE_MATERI_CHECK, TEMPERATURE_MATERI_CHECK_EN);
+  topic.eksperimenCheck = mapCheckQuestions(TEMPERATURE_EKSPERIMEN_CHECK, TEMPERATURE_EKSPERIMEN_CHECK_EN);
 })();
 
 /* ------------------------------------------------------------
@@ -3197,6 +3329,33 @@ const IDEALGASES_LAB_CONCEPTS_EN = [
   "Other (write your own in additional instructions)"
 ];
 
+const IDEALGASES_MATERI_CHECK = [
+  { question: "Hukum Boyle menyatakan bahwa pada suhu tetap, hasil kali tekanan (p) dan volume (V) suatu gas bersifat...",
+    options: ["Berbanding lurus dengan suhu", "Konstan", "Selalu bertambah", "Berbanding lurus dengan p saja"], correct: 1,
+    explanation: "Hukum Boyle: pV = konstan, selama suhu T dan jumlah mol gas n tetap." }
+];
+const IDEALGASES_MATERI_CHECK_EN = [
+  { question: "Boyle's Law states that, at constant temperature, the product of pressure (p) and volume (V) of a gas is...",
+    options: ["Directly proportional to temperature", "Constant", "Always increasing", "Directly proportional to p alone"],
+    explanation: "Boyle's Law: pV = constant, as long as temperature T and amount of gas n stay fixed." }
+];
+const IDEALGASES_EKSPERIMEN_CHECK = [
+  { question: "Pada eksperimen ini, panjang kolom udara L dipakai untuk mewakili volume V gas. Mengapa ini valid tanpa perlu mengukur luas penampang tabung A?",
+    options: ["Karena A selalu bernilai 1", "Karena A konstan sepanjang percobaan sehingga tereliminasi saat membandingkan data", "Karena udara tidak memiliki volume", "Karena tekanan tidak bergantung pada volume"], correct: 1,
+    explanation: "V = A×L dengan A konstan (tabung seragam), sehingga perbandingan V cukup diwakili oleh perbandingan L." },
+  { question: "Jika data p dan L (mewakili V) dari eksperimen ini konsisten dengan Hukum Boyle, maka grafik p terhadap 1/L seharusnya berbentuk...",
+    options: ["Garis lurus melalui titik asal", "Parabola", "Garis lurus horizontal", "Kurva menurun eksponensial"], correct: 0,
+    explanation: "pV = konstan ⇒ p = konstan/V ⇒ p sebanding 1/V (dan karena itu juga 1/L), jadi p vs 1/L adalah garis lurus melalui titik asal." }
+];
+const IDEALGASES_EKSPERIMEN_CHECK_EN = [
+  { question: "In this experiment, the trapped air column length L is used to represent the gas volume V. Why is this valid without measuring the tube's cross-sectional area A?",
+    options: ["Because A is always equal to 1", "Because A stays constant throughout the experiment, so it cancels out when comparing data", "Because air has no volume", "Because pressure does not depend on volume"],
+    explanation: "V = A×L with A constant (uniform tube), so comparing volumes is equivalent to comparing lengths L." },
+  { question: "If the p and L (representing V) data from this experiment agree with Boyle's Law, a graph of p against 1/L should be...",
+    options: ["A straight line through the origin", "A parabola", "A horizontal straight line", "A decreasing exponential curve"],
+    explanation: "pV = constant ⇒ p = constant/V ⇒ p is proportional to 1/V (and hence 1/L), so p vs 1/L is a straight line through the origin." }
+];
+
 (function attachIdealGasesContent() {
   const topic = TOPICS.find(t => t.id === "ideal-gases");
   topic.desc = { id: topic.desc, en: IDEALGASES_DESC_EN };
@@ -3216,6 +3375,8 @@ const IDEALGASES_LAB_CONCEPTS_EN = [
   });
   topic.labConcepts = IDEALGASES_LAB_CONCEPTS.map((c, i) => ({ id: c, en: IDEALGASES_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: IDEALGASES_FORMULA_SHEET, en: IDEALGASES_FORMULA_SHEET_EN };
+  topic.materiCheck = mapSingleCheck(IDEALGASES_MATERI_CHECK, IDEALGASES_MATERI_CHECK_EN);
+  topic.eksperimenCheck = mapCheckQuestions(IDEALGASES_EKSPERIMEN_CHECK, IDEALGASES_EKSPERIMEN_CHECK_EN);
 })();
 
 /* ------------------------------------------------------------
@@ -3928,6 +4089,33 @@ const THERMODYNAMICS_LAB_CONCEPTS_EN = [
   "Other (write your own in the additional instructions)"
 ];
 
+const THERMODYNAMICS_MATERI_CHECK = [
+  { question: "Pada proses adiabatik, nilai kalor (q) yang berpindah ke/dari sistem adalah...",
+    options: ["Selalu maksimum", "Nol (tidak ada perpindahan kalor)", "Sama dengan kerja w", "Tak terhingga"], correct: 1,
+    explanation: "Proses adiabatik didefinisikan sebagai proses tanpa perpindahan kalor, q = 0." }
+];
+const THERMODYNAMICS_MATERI_CHECK_EN = [
+  { question: "In an adiabatic process, the amount of heat (q) transferred to/from the system is...",
+    options: ["Always maximum", "Zero (no heat transfer)", "Equal to the work w", "Infinite"],
+    explanation: "An adiabatic process is defined as one with no heat transfer, q = 0." }
+];
+const THERMODYNAMICS_EKSPERIMEN_CHECK = [
+  { question: "Pada peragaan fire piston, piston didorong SANGAT CEPAT ke dalam tabung. Mengapa kecepatan ini penting agar prosesnya mendekati adiabatik?",
+    options: ["Supaya piston tidak macet", "Supaya tidak ada cukup waktu bagi kalor untuk berpindah keluar melalui dinding tabung", "Supaya tekanan gas menjadi nol", "Supaya volume gas bertambah"], correct: 1,
+    explanation: "Proses yang sangat cepat tidak memberi cukup waktu bagi kalor untuk keluar, sehingga q ≈ 0 (mendekati adiabatik)." },
+  { question: "Karena piston melakukan kerja PADA udara (memampatkannya), nilai w pada persamaan ΔU = q + w bertanda...",
+    options: ["Negatif", "Nol", "Positif", "Tidak dapat ditentukan"], correct: 2,
+    explanation: "Kerja yang dilakukan PADA sistem (gas dimampatkan) bernilai positif dalam konvensi ΔU = q + w, sehingga ΔU juga positif (suhu naik)." }
+];
+const THERMODYNAMICS_EKSPERIMEN_CHECK_EN = [
+  { question: "In the fire piston demonstration, the piston is pushed in VERY QUICKLY. Why does this speed matter for the process to approximate an adiabatic process?",
+    options: ["So the piston does not get stuck", "So there isn't enough time for heat to escape through the tube walls", "So the gas pressure becomes zero", "So the gas volume increases"],
+    explanation: "A very fast process leaves no time for heat to escape, so q ≈ 0 (approximately adiabatic)." },
+  { question: "Since the piston does work ON the air (compressing it), the sign of w in ΔU = q + w is...",
+    options: ["Negative", "Zero", "Positive", "Cannot be determined"],
+    explanation: "Work done ON the system (gas being compressed) is positive under the ΔU = q + w convention, so ΔU is also positive (temperature rises)." }
+];
+
 (function attachThermodynamicsContent() {
   const topic = TOPICS.find(t => t.id === "thermodynamics");
   topic.desc = { id: topic.desc, en: THERMODYNAMICS_DESC_EN };
@@ -3947,4 +4135,6 @@ const THERMODYNAMICS_LAB_CONCEPTS_EN = [
   });
   topic.labConcepts = THERMODYNAMICS_LAB_CONCEPTS.map((c, i) => ({ id: c, en: THERMODYNAMICS_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: THERMODYNAMICS_FORMULA_SHEET, en: THERMODYNAMICS_FORMULA_SHEET_EN };
+  topic.materiCheck = mapSingleCheck(THERMODYNAMICS_MATERI_CHECK, THERMODYNAMICS_MATERI_CHECK_EN);
+  topic.eksperimenCheck = mapCheckQuestions(THERMODYNAMICS_EKSPERIMEN_CHECK, THERMODYNAMICS_EKSPERIMEN_CHECK_EN);
 })();

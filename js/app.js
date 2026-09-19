@@ -15,19 +15,50 @@ let editCount = 0;
 const MAX_FOLLOWUP_EDITS = 5;
 
 /* ============================================================
-   Navigasi bertahap (sesuai sintaks pembelajaran)
+   Navigasi bertahap (sesuai sintaks PjBL - Project based Learning)
    ------------------------------------------------------------
+   Diganti dari sintaks Inquiry Learning ke sintaks PjBL (2026-09-19)
+   karena tiap topik sekarang berjalan sebagai SATU PROYEK
+   berkelanjutan yang bisa memakan 2-3 pertemuan, bukan lagi harus
+   selesai dalam satu sesi duduk:
+     1) Penentuan Pertanyaan Mendasar & Perencanaan  -> tab Materi
+     2) Mendesain Perencanaan Proyek & Menyusun Jadwal (data)
+                                                       -> tab Eksperimen
+     3) Memonitor Peserta Didik & Kemajuan Proyek     -> KONFIRMASI GURU
+        (checkpoint di Eksperimen & di Lab Simulasi, lihat GATE_STAGES
+        di bawah)
+     4) Menguji Hasil                                 -> tab Latihan Soal
+        & hasil simulasi di tab Lab
+     5) Mengevaluasi Pengalaman                       -> refleksi di
+        tab Lab Simulasi sebelum konfirmasi akhir guru
+
    Kuncinya PER TOPIK, bukan antar-topik: siswa boleh mulai dari
    topik mana saja (mis. langsung ke Magnetic Fields tanpa perlu
-   menyelesaikan Kinematics dulu), tapi begitu masuk ke sebuah
-   topik "ready", tab di dalamnya (Materi -> Eksperimen -> Latihan
-   Soal -> Lab Simulasi Virtual) tetap harus dibuka BERURUTAN
-   supaya sesuai sintaks inkuiri. Guru bisa membagikan
-   TEACHER_UNLOCK_CODE (di js/config.js) untuk siswa yang perlu
-   menjelajah bebas tanpa urutan sama sekali.
+   menyelesaikan Kinematics dulu), tapi begitu masuk ke sebuah topik
+   "ready", tab di dalamnya (Materi -> Eksperimen -> Latihan Soal ->
+   Lab Simulasi Virtual) tetap harus dibuka BERURUTAN. Guru bisa
+   membagikan TEACHER_UNLOCK_CODE (di js/config.js) untuk siswa yang
+   perlu menjelajah bebas tanpa urutan sama sekali.
+
+   YANG BARU (2026-09-19): pindah ke tab berikutnya sekarang perlu
+   menjawab pertanyaan konfirmasi pemahaman di SETIAP tab/aktivitas,
+   TAPI hanya dua checkpoint yang juga butuh persetujuan eksplisit
+   dari guru (lihat GATE_STAGES): Eksperimen (sebelum Latihan Soal
+   & Lab Simulasi terbuka) dan Lab Simulasi (sebelum topik ditandai
+   selesai). Materi dan Latihan Soal dinilai otomatis di klien saja,
+   TANPA menunggu guru. Lihat blok "Konfirmasi Pemahaman & Gate Guru"
+   di bawah untuk detail implementasinya.
    ============================================================ */
 const TAB_ORDER = ["materi", "eksperimen", "latihan", "lab"];
 const TAB_LABELS = { materi: t("tab.materi"), eksperimen: t("tab.eksperimen"), latihan: t("tab.latihan"), lab: t("tab.lab") };
+// Tahap PjBL yang ditampilkan sebagai subjudul kecil di atas tiap panel tab
+// (murni label/framing, tidak memengaruhi logika gate).
+const PJBL_STAGE_LABELS = {
+  materi: "pjbl.stage.materi",
+  eksperimen: "pjbl.stage.eksperimen",
+  latihan: "pjbl.stage.latihan",
+  lab: "pjbl.stage.lab"
+};
 
 function isUnlockAll() {
   return localStorage.getItem(STORAGE_KEY_UNLOCK_ALL) === "true";
@@ -74,6 +105,326 @@ function nextReadyTopicId(topicId) {
   const idx = order.indexOf(topicId);
   if (idx < 0 || idx >= order.length - 1) return null;
   return order[idx + 1];
+}
+
+/* ============================================================
+   Konfirmasi Pemahaman & Gate Guru (checkpoint PjBL)
+   ------------------------------------------------------------
+   Ditambahkan 2026-09-19 atas permintaan user: siswa cuma boleh
+   pindah tab kalau bisa menjawab pertanyaan konfirmasi pemahaman
+   untuk aktivitas itu. Materi & Latihan Soal dinilai OTOMATIS di
+   klien saja (langsung lanjut kalau benar). Eksperimen & Lab
+   Simulasi Virtual TAMBAHAN butuh persetujuan eksplisit guru lewat
+   Panel Guru sebelum siswa dianggap boleh lanjut/selesai - dikirim
+   ke backend (mode "gate_submit"/"gate_status") sebagai permintaan
+   "pending" yang disetujui/ditolak lewat mode "teacher_gate_decide".
+   Status terakhir di-cache di localStorage supaya UI tidak kosong
+   sebelum polling pertama selesai / saat offline.
+   ============================================================ */
+const GATE_POLL_MS = 10000;
+const STORAGE_KEY_GATE_CACHE = "physicsSandbox.gateCache";
+
+let gatePollTimer = null;
+let gatePollStage = null;
+let gatePollTopicId = null;
+
+function getGateCache() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_GATE_CACHE) || "{}"); }
+  catch (e) { return {}; }
+}
+function setGateCacheEntry(topicId, stage, data) {
+  const cache = getGateCache();
+  cache[topicId] = cache[topicId] || {};
+  cache[topicId][stage] = data;
+  localStorage.setItem(STORAGE_KEY_GATE_CACHE, JSON.stringify(cache));
+}
+function getGateCacheEntry(topicId, stage) {
+  const cache = getGateCache();
+  return (cache[topicId] && cache[topicId][stage]) || null;
+}
+
+/* ---- Modal generik pertanyaan konfirmasi (dibuat sekali, dipakai ulang) ---- */
+let confirmModalEl = null;
+function ensureConfirmModal() {
+  if (confirmModalEl) return confirmModalEl;
+  const el = document.createElement("div");
+  el.className = "modal";
+  el.id = "confirm-modal";
+  el.hidden = true;
+  el.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3 id="confirm-modal-title"></h3>
+        <button type="button" id="confirm-modal-close-btn" class="icon-btn" aria-label="Tutup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="muted small" id="confirm-modal-desc"></p>
+      <div id="confirm-modal-body"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="confirm-modal-submit-btn"></button>
+      </div>
+      <p class="teacher-note" id="confirm-modal-status"></p>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector("#confirm-modal-close-btn").addEventListener("click", () => { el.hidden = true; });
+  confirmModalEl = el;
+  return el;
+}
+function renderConfirmQuestions(questions) {
+  return questions.map((q, qi) => `
+    <div class="question-card" data-qidx="${qi}">
+      <div class="q-title">${t("question.label", { n: qi + 1 })}</div>
+      <div>${trContent(q.question)}</div>
+      <div class="options-input">
+        ${q.options.map((opt, oi) => `
+          <label class="option-radio">
+            <input type="radio" name="cq-${qi}" value="${oi}">
+            ${String.fromCharCode(65 + oi)}. ${trContent(opt)}
+          </label>`).join("")}
+      </div>
+      <p class="confirm-feedback muted small" hidden></p>
+    </div>`).join("");
+}
+// opts: { title, desc, questions (array|null), fallbackLabel, submitLabel, onPass }
+// questions null -> tampil sebagai satu checkbox konfirmasi generik (fallback
+// untuk topik yang belum diisi soal konfirmasi terstruktur).
+function openConfirmModal(opts) {
+  const el = ensureConfirmModal();
+  document.getElementById("confirm-modal-title").textContent = opts.title;
+  document.getElementById("confirm-modal-desc").textContent = opts.desc || "";
+  const body = document.getElementById("confirm-modal-body");
+  const statusEl = document.getElementById("confirm-modal-status");
+  statusEl.textContent = "";
+  let submitBtn = document.getElementById("confirm-modal-submit-btn");
+  submitBtn.textContent = opts.submitLabel || t("confirm.checkbtn");
+  // Ganti tombol dengan clone supaya listener lama (dari pemanggilan
+  // sebelumnya) tidak menumpuk.
+  const newBtn = submitBtn.cloneNode(true);
+  submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+  submitBtn = newBtn;
+
+  if (opts.questions && opts.questions.length) {
+    body.innerHTML = renderConfirmQuestions(opts.questions);
+    submitBtn.addEventListener("click", () => {
+      const cards = body.querySelectorAll(".question-card");
+      let allCorrect = true;
+      cards.forEach((card, qi) => {
+        const checked = card.querySelector(`input[name="cq-${qi}"]:checked`);
+        const feedback = card.querySelector(".confirm-feedback");
+        const q = opts.questions[qi];
+        if (!checked) {
+          allCorrect = false;
+          feedback.hidden = false;
+          feedback.textContent = t("confirm.pickanswer");
+          feedback.className = "confirm-feedback small warn";
+          return;
+        }
+        const isRight = parseInt(checked.value, 10) === q.correct;
+        if (!isRight) allCorrect = false;
+        feedback.hidden = false;
+        feedback.textContent = isRight ? t("confirm.correct") : (trContent(q.explanation) || t("confirm.wrong"));
+        feedback.className = "confirm-feedback small " + (isRight ? "ok" : "warn");
+      });
+      if (allCorrect) {
+        el.hidden = true;
+        opts.onPass();
+      } else {
+        statusEl.textContent = t("confirm.tryagain");
+      }
+    });
+  } else {
+    body.innerHTML = `<label class="option-radio"><input type="checkbox" id="confirm-generic-check"> ${opts.fallbackLabel || t("confirm.generic.label")}</label>`;
+    submitBtn.addEventListener("click", () => {
+      if (!document.getElementById("confirm-generic-check").checked) {
+        statusEl.textContent = t("confirm.generic.needcheck");
+        return;
+      }
+      el.hidden = true;
+      opts.onPass();
+    });
+  }
+  el.hidden = false;
+}
+
+function startMateriGate(onPass) {
+  openConfirmModal({
+    title: t("gate.materi.title"),
+    desc: t("gate.materi.desc"),
+    questions: currentTopic.materiCheck ? [currentTopic.materiCheck] : null,
+    fallbackLabel: t("gate.materi.fallback"),
+    onPass
+  });
+}
+function startEksperimenGate() {
+  openConfirmModal({
+    title: t("gate.eksperimen.title"),
+    desc: t("gate.eksperimen.desc"),
+    questions: currentTopic.eksperimenCheck || null,
+    fallbackLabel: t("gate.eksperimen.fallback"),
+    submitLabel: t("gate.eksperimen.submitbtn"),
+    onPass: () => submitGateForApproval("eksperimen", t("gate.eksperimen.autosummary"))
+  });
+}
+function startLabReflectionGate() {
+  const input = document.getElementById("lab-reflection-input");
+  const text = (input ? input.value : "").trim();
+  const statusEl = document.getElementById("lab-reflection-status");
+  if (text.length < 15) {
+    if (statusEl) statusEl.textContent = t("gate.lab.reflection.tooShort");
+    return;
+  }
+  submitGateForApproval("lab", text);
+}
+
+async function submitGateForApproval(stage, summary) {
+  if (!currentTopic) return;
+  const topicId = currentTopic.id;
+  const studentId = getStudentId();
+  setGateCacheEntry(topicId, stage, { status: "pending", submittedAt: Date.now() });
+  renderGateBanner(stage);
+  showToast(t("gate.submitted.toast"));
+  const backendUrl = getBackendUrl();
+  if (backendUrl) {
+    try {
+      await fetch(backendUrl, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ mode: "gate_submit", topicId, studentId, stage, summary: summary || "" })
+      });
+    } catch (e) { /* akan tersinkron lagi lewat polling di bawah */ }
+  }
+  startGatePolling(topicId, stage);
+}
+function startGatePolling(topicId, stage) {
+  stopGatePolling();
+  gatePollTopicId = topicId;
+  gatePollStage = stage;
+  pollGateStatus();
+  gatePollTimer = setInterval(pollGateStatus, GATE_POLL_MS);
+}
+function stopGatePolling() {
+  if (gatePollTimer) { clearInterval(gatePollTimer); gatePollTimer = null; }
+  gatePollStage = null;
+  gatePollTopicId = null;
+}
+async function pollGateStatus() {
+  const backendUrl = getBackendUrl();
+  if (!backendUrl || !gatePollTopicId) return;
+  const topicId = gatePollTopicId, stage = gatePollStage;
+  try {
+    const resp = await fetch(backendUrl, {
+      method: "POST", headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ mode: "gate_status", topicId, studentId: getStudentId() })
+    });
+    const data = await resp.json();
+    const st = data[stage];
+    if (!st || !st.status) return;
+    setGateCacheEntry(topicId, stage, st);
+    if (st.status !== "pending") {
+      stopGatePolling();
+      handleGateDecision(topicId, stage, st);
+    } else if (currentTopic && currentTopic.id === topicId) {
+      renderGateBanner(stage);
+    }
+  } catch (e) { /* jaringan sesekali gagal - coba lagi di polling berikutnya */ }
+}
+function handleGateDecision(topicId, stage, st) {
+  if (st.status === "approved") {
+    if (stage === "eksperimen") {
+      // Menyetujui Eksperimen membuka Latihan Soal DAN Lab Simulasi
+      // sekaligus (index 3 = tab terakhir), sesuai permintaan: guru cukup
+      // konfirmasi sekali di sini, dua tab berikutnya langsung terbuka.
+      advanceProgress(topicId, TAB_ORDER.length - 1);
+      showToast(t("gate.eksperimen.approved.toast"));
+    } else {
+      showToast(t("gate.lab.approved.toast"));
+    }
+  } else {
+    showToast(stage === "eksperimen" ? t("gate.eksperimen.rejected.toast") : t("gate.lab.rejected.toast"));
+  }
+  if (currentTopic && currentTopic.id === topicId) {
+    renderNav();
+    const activeTab = document.querySelector(".tab-btn.active")?.dataset.tab;
+    if (activeTab) updateTopicProgressUI(activeTab);
+    renderGateBanner(stage);
+  }
+}
+function gateBannerContainerId(stage) {
+  return stage === "eksperimen" ? "eksperimen-gate-banner" : "lab-gate-banner";
+}
+function renderGateBanner(stage) {
+  if (!currentTopic) return;
+  const el = document.getElementById(gateBannerContainerId(stage));
+  if (!el) return;
+  const cached = getGateCacheEntry(currentTopic.id, stage);
+  if (!cached || !cached.status) { el.innerHTML = ""; el.hidden = true; return; }
+  el.hidden = false;
+  if (cached.status === "pending") {
+    el.className = "gate-banner gate-pending";
+    el.innerHTML = `<span class="gate-banner-icon">&#9203;</span> ${t("gate.banner.pending." + stage)}`;
+  } else if (cached.status === "approved") {
+    el.className = "gate-banner gate-approved";
+    el.innerHTML = `<span class="gate-banner-icon">&#10003;</span> ${t("gate.banner.approved." + stage)}`;
+  } else if (cached.status === "rejected") {
+    el.className = "gate-banner gate-rejected";
+    const note = cached.note ? `<br><em>${t("gate.banner.notefromteacher")}: ${escapeAttr(cached.note)}</em>` : "";
+    const retryId = stage + "-gate-retry-btn";
+    el.innerHTML = `<span class="gate-banner-icon">&#10007;</span> ${t("gate.banner.rejected." + stage)}${note}` +
+      `<br><button type="button" class="btn btn-secondary btn-small gate-retry-btn" id="${retryId}">${t("gate.banner.retrybtn")}</button>`;
+    const retryBtn = document.getElementById(retryId);
+    if (retryBtn) retryBtn.addEventListener("click", () => {
+      if (stage === "eksperimen") startEksperimenGate();
+      else startLabReflectionGate();
+    });
+  }
+  // Form refleksi Lab dinonaktifkan selagi menunggu/​sudah disetujui guru -
+  // ditolak tetap bisa diedit & dikirim ulang lewat tombol retry di atas.
+  if (stage === "lab") {
+    const input = document.getElementById("lab-reflection-input");
+    const submitBtn = document.getElementById("lab-reflection-submit-btn");
+    const locked = cached.status === "pending" || cached.status === "approved";
+    if (input) input.disabled = locked;
+    if (submitBtn) submitBtn.hidden = locked;
+  }
+}
+// Dipanggil sekali setiap topik dibuka (selectTopic) supaya keputusan guru
+// yang terjadi SAAT siswa offline/pindah perangkat tetap tersinkron, dan
+// supaya polling yang terputus (mis. reload halaman saat masih pending)
+// otomatis dilanjutkan lagi.
+async function checkGateOnTopicOpen(topicId) {
+  const backendUrl = getBackendUrl();
+  if (!backendUrl) { renderGateBanner("eksperimen"); renderGateBanner("lab"); return; }
+  try {
+    const resp = await fetch(backendUrl, {
+      method: "POST", headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ mode: "gate_status", topicId, studentId: getStudentId() })
+    });
+    const data = await resp.json();
+    ["eksperimen", "lab"].forEach(stage => {
+      if (!data[stage]) return;
+      const prev = getGateCacheEntry(topicId, stage);
+      setGateCacheEntry(topicId, stage, data[stage]);
+      if (data[stage].status === "approved" && stage === "eksperimen" && (!prev || prev.status !== "approved")) {
+        advanceProgress(topicId, TAB_ORDER.length - 1);
+      }
+      if (data[stage].status === "pending" && gatePollTopicId !== topicId) {
+        startGatePolling(topicId, stage);
+      }
+    });
+  } catch (e) { /* offline - tetap tampilkan cache lokal terakhir di bawah */ }
+  if (currentTopic && currentTopic.id === topicId) {
+    renderNav();
+    const activeTab = document.querySelector(".tab-btn.active")?.dataset.tab;
+    if (activeTab) updateTopicProgressUI(activeTab);
+    renderGateBanner("eksperimen");
+    renderGateBanner("lab");
+  }
+}
+// Section PjBL kecil yang ditampilkan di atas tiap panel tab (framing saja,
+// tidak memengaruhi logika).
+function pjblStageHTML(tabName) {
+  const key = PJBL_STAGE_LABELS[tabName];
+  return key ? `<p class="pjbl-stage-label">${t(key)}</p>` : "";
 }
 
 /* ============================================================
@@ -398,6 +749,7 @@ function selectTopic(id) {
   renderEksperimen();
   renderLatihan();
   setupLabForTopic();
+  if (currentTopic.status === "ready") checkGateOnTopicOpen(currentTopic.id);
 
   if (window.Chatbot) Chatbot.setTopic(currentTopic.id);
 
@@ -506,18 +858,60 @@ function updateTopicProgressUI(activeTab) {
   if (isLastTab) {
     nextBtn.hidden = true;
     finishBtn.hidden = !nextTopicId || isUnlockAll();
-  } else if (activeIdx === unlocked) {
+  } else if (activeIdx <= unlocked) {
+    // "<=" (bukan cuma "===") supaya Next tetap ada di tab yang sudah pernah
+    // dilewati juga - perlu karena persetujuan guru di Eksperimen membuka
+    // Latihan+Lab SEKALIGUS (unlocked "melompat" 2 tab), jadi begitu siswa
+    // ada di tab Latihan, tab itu sendiri sudah "di belakang" unlocked tapi
+    // tetap harus punya tombol Next ke Lab.
     finishBtn.hidden = true;
-    nextBtn.hidden = false;
-    document.getElementById("progress-next-label").textContent = TAB_LABELS[TAB_ORDER[activeIdx + 1]];
+    // Selama permintaan konfirmasi Eksperimen masih "pending" di guru,
+    // sembunyikan tombol Next - siswa tinggal menunggu (lihat gate-banner)
+    // sampai disetujui/ditolak, tidak perlu (dan tidak boleh) submit ulang.
+    const eksGate = activeTab === "eksperimen" ? getGateCacheEntry(currentTopic.id, "eksperimen") : null;
+    if (eksGate && eksGate.status === "pending") {
+      nextBtn.hidden = true;
+    } else {
+      nextBtn.hidden = false;
+      document.getElementById("progress-next-label").textContent = TAB_LABELS[TAB_ORDER[activeIdx + 1]];
+    }
   } else {
     nextBtn.hidden = true;
     finishBtn.hidden = true;
   }
 }
 document.getElementById("progress-next-btn").addEventListener("click", () => {
-  const activeIdx = TAB_ORDER.indexOf(document.querySelector(".tab-btn.active").dataset.tab);
-  if (currentTopic) advanceProgress(currentTopic.id, activeIdx + 1);
+  if (!currentTopic) return;
+  const activeTab = document.querySelector(".tab-btn.active").dataset.tab;
+  const activeIdx = TAB_ORDER.indexOf(activeTab);
+  const unlocked = isUnlockAll() ? TAB_ORDER.length - 1 : getUnlockedTabIndex(currentTopic.id);
+  // Kalau tab ini sudah PERNAH dilewati sebelumnya (mis. Eksperimen yang
+  // sudah disetujui guru - yang otomatis membuka Latihan+Lab sekaligus
+  // sehingga unlocked "melompat" duluan - atau Materi yang dibuka ulang),
+  // tidak perlu tanya ulang pertanyaan konfirmasinya, langsung next saja.
+  const alreadyPassed = activeIdx < unlocked;
+
+  // Materi: siswa harus jawab benar pertanyaan konfirmasi dulu (dinilai
+  // otomatis di klien) baru boleh lanjut ke Eksperimen - tanpa guru.
+  if (activeTab === "materi" && !alreadyPassed) {
+    startMateriGate(() => {
+      advanceProgress(currentTopic.id, activeIdx + 1);
+      switchTab(TAB_ORDER[activeIdx + 1]);
+    });
+    return;
+  }
+  // Eksperimen: jawab pertanyaan hubungan antar variabel & pengelolaan data
+  // dulu (dinilai otomatis), lalu dikirim ke guru untuk konfirmasi. Progress
+  // BELUM maju di sini - baru maju lewat handleGateDecision() begitu guru
+  // menyetujui (yang otomatis membuka Latihan Soal + Lab sekaligus).
+  if (activeTab === "eksperimen" && !alreadyPassed) {
+    startEksperimenGate();
+    return;
+  }
+  // Latihan Soal -> Lab Simulasi (langsung next tanpa pertanyaan konfirmasi
+  // maupun persetujuan guru, sesuai permintaan user), atau tab manapun yang
+  // sudah pernah dilewati sebelumnya: next langsung.
+  advanceProgress(currentTopic.id, activeIdx + 1);
   switchTab(TAB_ORDER[activeIdx + 1]);
 });
 document.getElementById("progress-finish-btn").addEventListener("click", () => {
@@ -529,7 +923,7 @@ document.getElementById("progress-finish-btn").addEventListener("click", () => {
 function renderMateri() {
   const panel = document.getElementById("panel-materi");
   if (currentTopic.status === "ready" && currentTopic.materiHTML) {
-    panel.innerHTML = trContent(currentTopic.materiHTML);
+    panel.innerHTML = pjblStageHTML("materi") + trContent(currentTopic.materiHTML);
   } else {
     panel.innerHTML = comingSoonHTML("materi");
   }
@@ -543,8 +937,11 @@ function renderEksperimen() {
   const panel = document.getElementById("panel-eksperimen");
   if (currentTopic.status === "ready" && currentTopic.eksperimen) {
     const ex = currentTopic.eksperimen;
-    panel.innerHTML = `<h3>${trContent(ex.title)}</h3>${trContent(ex.intro)}` +
+    panel.innerHTML = pjblStageHTML("eksperimen") +
+      `<div id="eksperimen-gate-banner" class="gate-banner" hidden></div>` +
+      `<h3>${trContent(ex.title)}</h3>${trContent(ex.intro)}` +
       (ex.simHTML ? `<div class="sim-embed"><iframe sandbox="allow-scripts" srcdoc="${escapeAttr(ex.simHTML)}"></iframe></div>` : "");
+    renderGateBanner("eksperimen");
   } else {
     panel.innerHTML = comingSoonHTML("eksperimen");
   }
@@ -557,7 +954,7 @@ function renderEksperimen() {
 function renderLatihan() {
   const panel = document.getElementById("panel-latihan");
   if (currentTopic.status === "ready" && currentTopic.latihan && currentTopic.latihan.length) {
-    panel.innerHTML = currentTopic.latihan.map((q, i) => {
+    panel.innerHTML = pjblStageHTML("latihan") + currentTopic.latihan.map((q, i) => {
       let optionsHTML = "";
       if (q.type === "mcq") {
         optionsHTML = `<ul class="options">${q.options.map((opt, oi) =>
@@ -622,6 +1019,25 @@ function setupLabForTopic() {
   document.getElementById("edit-followup-status").textContent = "";
   resetEditCount();
   refreshKeyStatusUI();
+
+  // Refleksi/validasi Lab (checkpoint kedua guru) - hanya relevan untuk
+  // topik "ready" yang memang punya alur progres bertahap; topik "segera
+  // hadir" belum punya penilaian bertahap jadi bagian ini disembunyikan.
+  const isReady = currentTopic.status === "ready";
+  const reflectionSection = document.getElementById("lab-reflection-section");
+  const reflectionInput = document.getElementById("lab-reflection-input");
+  const reflectionStatus = document.getElementById("lab-reflection-status");
+  if (reflectionSection) reflectionSection.hidden = !isReady;
+  if (reflectionInput) { reflectionInput.value = ""; reflectionInput.disabled = false; }
+  if (reflectionStatus) reflectionStatus.textContent = "";
+  const reflectionSubmitBtn = document.getElementById("lab-reflection-submit-btn");
+  if (reflectionSubmitBtn) reflectionSubmitBtn.hidden = false;
+  if (isReady) {
+    renderGateBanner("lab");
+  } else {
+    const banner = document.getElementById("lab-gate-banner");
+    if (banner) { banner.hidden = true; banner.innerHTML = ""; }
+  }
 }
 
 function resetEditCount() {
@@ -912,6 +1328,8 @@ document.getElementById("download-btn").addEventListener("click", () => {
   a.remove();
   URL.revokeObjectURL(url);
 });
+
+document.getElementById("lab-reflection-submit-btn").addEventListener("click", startLabReflectionGate);
 
 /* ---------------- Pengaturan (modal) ---------------- */
 const settingsModal = document.getElementById("settings-modal");
