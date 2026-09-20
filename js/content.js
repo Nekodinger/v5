@@ -104,10 +104,17 @@ function mediaRow(image, video) {
    ------------------------------------------------------------
    Dipakai gate progresi tab per topik (lihat app.js, fungsi
    openConfirmModal/dsb.):
-   - topic.materiCheck   : SATU soal MCQ (pemahaman umum materi),
-                           dinilai otomatis di klien, TANPA konfirmasi
-                           guru - lulus di sini langsung membuka tab
-                           Eksperimen.
+   - topic.materiCheck   : 5 SOAL MCQ (pemahaman umum materi), dinilai
+                           otomatis di klien SEBAGAI SKOR (bukan harus
+                           benar semua) - siswa perlu skor minimal 80%
+                           (PASS_THRESHOLD_MATERI di app.js) untuk
+                           lulus. Kalau skor < 80%, modal TIDAK
+                           menutup/lanjut - siswa diminta mempelajari
+                           kembali Materi Belajar di atas lalu klik
+                           Next untuk mencoba ulang (lihat
+                           startMateriGate() & openConfirmModal() di
+                           app.js). Lulus di sini TANPA konfirmasi
+                           guru - langsung membuka tab Eksperimen.
    - topic.eksperimenCheck : 2 SOAL MCQ tentang hubungan antar-variabel
                            & pengelolaan data pada eksperimen topik ini,
                            dinilai otomatis di klien. Kalau BENAR SEMUA,
@@ -802,12 +809,36 @@ const KINEMATICS_LAB_CONCEPTS_EN = [
 const KINEMATICS_MATERI_CHECK = [
   { question: "Sebuah benda bergerak lurus berubah beraturan (GLBB) dari keadaan diam. Besaran apa yang ditunjukkan oleh GRADIEN grafik kecepatan (v) terhadap waktu (t)?",
     options: ["Jarak tempuh", "Percepatan", "Kecepatan rata-rata", "Perpindahan"], correct: 1,
-    explanation: "Gradien grafik v-t adalah Δv/Δt, yaitu definisi percepatan." }
+    explanation: "Gradien grafik v-t adalah Δv/Δt, yaitu definisi percepatan." },
+  { question: "Seorang pelari mengelilingi lintasan berbentuk lingkaran sampai kembali persis ke titik start. Bagaimana perbandingan jarak dan perpindahannya?",
+    options: ["Perpindahan = keliling lingkaran, sama dengan jarak", "Perpindahan = nol, sedangkan jarak = keliling lingkaran", "Perpindahan dan jarak keduanya nol", "Perpindahan negatif, jarak positif"], correct: 1,
+    explanation: "Karena pelari kembali tepat ke titik awal, perubahan posisinya (perpindahan) = nol, meskipun jarak total yang ditempuh sama dengan keliling lintasan." },
+  { question: "Sebuah bola dijatuhkan bebas dari keadaan diam. Berapa kelajuannya setelah jatuh selama 2 sekon (g = 9,81 m s⁻²)?",
+    options: ["9,81 m s⁻¹", "19,6 m s⁻¹", "29,4 m s⁻¹", "39,2 m s⁻¹"], correct: 1,
+    explanation: "v = u + gt = 0 + (9,81 × 2) = 19,62 ≈ 19,6 m s⁻¹ (u = 0 karena jatuh bebas dari diam)." },
+  { question: "Bola A dijatuhkan bebas (kecepatan awal nol) dan bola B ditembakkan mendatar (horizontal) pada saat bersamaan dari ketinggian yang sama. Manakah pernyataan yang benar tentang saat keduanya menyentuh tanah?",
+    options: ["Bola A lebih dulu, karena tidak punya kecepatan horizontal", "Bola B lebih dulu, karena bergerak lebih cepat secara keseluruhan", "Keduanya bersamaan, karena gerak vertikal dan horizontal saling independen dan komponen vertikal keduanya identik", "Tidak bisa ditentukan tanpa tahu kelajuan horizontal bola B"], correct: 2,
+    explanation: "Gerak horizontal dan vertikal bersifat independen. Kedua bola punya kecepatan vertikal awal nol dan percepatan vertikal yang sama (g), sehingga waktu jatuhnya sama meski jarak horizontalnya berbeda." },
+  { question: "Pada grafik kecepatan (v) terhadap waktu (t), luas daerah di bawah kurva menunjukkan besaran...",
+    options: ["Percepatan", "Perpindahan", "Kelajuan rata-rata", "Massa benda"], correct: 1,
+    explanation: "Luas di bawah grafik v-t sama dengan perpindahan benda pada selang waktu tersebut." }
 ];
 const KINEMATICS_MATERI_CHECK_EN = [
   { question: "An object moves with uniform acceleration (constant a) starting from rest. What quantity is shown by the GRADIENT of a velocity (v) vs time (t) graph?",
     options: ["Distance travelled", "Acceleration", "Average velocity", "Displacement"],
-    explanation: "The gradient of a v-t graph is Δv/Δt, which is the definition of acceleration." }
+    explanation: "The gradient of a v-t graph is Δv/Δt, which is the definition of acceleration." },
+  { question: "A runner goes all the way around a circular track and returns exactly to the starting point. How do their distance and displacement compare?",
+    options: ["Displacement equals the circle's circumference, same as distance", "Displacement is zero, while distance equals the circle's circumference", "Both displacement and distance are zero", "Displacement is negative, distance is positive"],
+    explanation: "Since the runner returns exactly to the start, the change in position (displacement) is zero, even though the total distance travelled equals the track's circumference." },
+  { question: "A ball is dropped from rest in free fall. What is its speed after falling for 2 seconds (g = 9.81 m s⁻²)?",
+    options: ["9.81 m s⁻¹", "19.6 m s⁻¹", "29.4 m s⁻¹", "39.2 m s⁻¹"],
+    explanation: "v = u + gt = 0 + (9.81 × 2) = 19.62 ≈ 19.6 m s⁻¹ (u = 0 since it's dropped from rest)." },
+  { question: "Ball A is dropped from rest and ball B is fired horizontally at the same instant from the same height. Which statement about when they hit the ground is correct?",
+    options: ["A hits first, since it has no horizontal velocity", "B hits first, since it moves faster overall", "They hit at the same time, since the horizontal and vertical motions are independent and their vertical components are identical", "It can't be determined without knowing B's horizontal speed"],
+    explanation: "Horizontal and vertical motion are independent. Both balls start with zero vertical velocity and experience the same vertical acceleration (g), so they fall for the same time even though they travel different horizontal distances." },
+  { question: "On a velocity (v) vs time (t) graph, the area under the curve represents...",
+    options: ["Acceleration", "Displacement", "Average speed", "Mass of the object"],
+    explanation: "The area under a v-t graph equals the object's displacement over that time interval." }
 ];
 const KINEMATICS_EKSPERIMEN_CHECK = [
   { question: "Pada eksperimen troli di bidang miring ini, GRADIEN grafik v-t (dari analisis pita ketik) mewakili besaran...",
@@ -846,7 +877,7 @@ const KINEMATICS_EKSPERIMEN_CHECK_EN = [
   });
   topic.labConcepts = KINEMATICS_LAB_CONCEPTS.map((c, i) => ({ id: c, en: KINEMATICS_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: KINEMATICS_FORMULA_SHEET, en: KINEMATICS_FORMULA_SHEET_EN };
-  topic.materiCheck = mapSingleCheck(KINEMATICS_MATERI_CHECK, KINEMATICS_MATERI_CHECK_EN);
+  topic.materiCheck = mapCheckQuestions(KINEMATICS_MATERI_CHECK, KINEMATICS_MATERI_CHECK_EN);
   topic.eksperimenCheck = mapCheckQuestions(KINEMATICS_EKSPERIMEN_CHECK, KINEMATICS_EKSPERIMEN_CHECK_EN);
 })();
 
@@ -1495,12 +1526,36 @@ const MAGNETIC_LAB_CONCEPTS_EN = [
 const MAGNETIC_MATERI_CHECK = [
   { question: "Kaidah tangan kanan (right-hand grip rule) pada kawat berarus digunakan untuk menentukan...",
     options: ["Besar gaya magnetik", "Arah medan magnet di sekitar kawat", "Massa jenis kawat", "Hambatan kawat"], correct: 1,
-    explanation: "Kaidah tangan kanan hanya menentukan ARAH medan magnet; besarnya dihitung dari rumus terpisah." }
+    explanation: "Kaidah tangan kanan hanya menentukan ARAH medan magnet; besarnya dihitung dari rumus terpisah." },
+  { question: "Sebuah kawat berarus berada dalam medan magnet luar, dengan arus dan medan saling tegak lurus. Kaidah apa yang dipakai untuk menentukan ARAH gaya magnetik pada kawat tersebut?",
+    options: ["Kaidah genggaman tangan kanan", "Kaidah Tangan Kiri Fleming", "Hukum Lenz", "Hukum Faraday"], correct: 1,
+    explanation: "Kaidah Tangan Kiri Fleming dipakai untuk arah gaya F: telunjuk = medan (Field), jari tengah = arus (Current), ibu jari = gaya (Thrust)." },
+  { question: "Sebuah kawat berarus diletakkan SEJAJAR dengan arah medan magnet luar (θ = 0°). Berapa besar gaya magnetik pada kawat tersebut?",
+    options: ["Maksimum, F = BIL", "Nol", "Setengah dari nilai maksimum", "Tidak dapat ditentukan tanpa nilai B"], correct: 1,
+    explanation: "F = BIL sin θ. Saat θ = 0° (sejajar medan), sin θ = 0 sehingga F = 0." },
+  { question: "Sebuah partikel bermuatan bergerak tegak lurus terhadap medan magnet seragam sehingga lintasannya melingkar. Jika kelajuan partikel dinaikkan (massa, muatan, dan B tetap), apa yang terjadi pada jari-jari lintasannya?",
+    options: ["Jari-jari mengecil", "Jari-jari membesar", "Jari-jari tetap sama", "Partikel berhenti berbelok"], correct: 1,
+    explanation: "r = mv/(BQ); jari-jari sebanding lurus dengan kelajuan v, jadi menaikkan kelajuan memperbesar jari-jari lintasan." },
+  { question: "Mengapa arah arus induksi (menurut Hukum Lenz) selalu melawan perubahan fluks magnetik yang menyebabkannya?",
+    options: ["Karena arus induksi selalu searah dengan medan magnet asal", "Sebagai konsekuensi dari hukum kekekalan energi", "Karena kumparan selalu memiliki hambatan listrik yang besar", "Karena medan magnet selalu berkurang seiring waktu"], correct: 1,
+    explanation: "Jika arus induksi memperkuat (bukan melawan) perubahan fluks, energi akan tercipta tanpa usaha dari luar - melanggar hukum kekekalan energi." }
 ];
 const MAGNETIC_MATERI_CHECK_EN = [
   { question: "The right-hand grip rule for a current-carrying wire is used to determine...",
     options: ["The magnitude of the magnetic force", "The direction of the magnetic field around the wire", "The wire's density", "The wire's resistance"],
-    explanation: "The right-hand grip rule only gives the DIRECTION of the magnetic field; its magnitude comes from a separate formula." }
+    explanation: "The right-hand grip rule only gives the DIRECTION of the magnetic field; its magnitude comes from a separate formula." },
+  { question: "A current-carrying wire sits in an external magnetic field, with the current and field perpendicular to each other. Which rule is used to find the DIRECTION of the magnetic force on the wire?",
+    options: ["The right-hand grip rule", "Fleming's Left-Hand Rule", "Lenz's Law", "Faraday's Law"],
+    explanation: "Fleming's Left-Hand Rule gives the direction of force F: first finger = Field, second finger = Current, thumb = Thrust (force)." },
+  { question: "A current-carrying wire is placed PARALLEL to an external magnetic field (θ = 0°). What is the magnitude of the magnetic force on the wire?",
+    options: ["Maximum, F = BIL", "Zero", "Half of the maximum value", "Cannot be determined without the value of B"],
+    explanation: "F = BIL sin θ. When θ = 0° (parallel to the field), sin θ = 0, so F = 0." },
+  { question: "A charged particle moves perpendicular to a uniform magnetic field, giving it a circular path. If the particle's speed is increased (mass, charge, and B unchanged), what happens to the radius of its path?",
+    options: ["The radius decreases", "The radius increases", "The radius stays the same", "The particle stops curving"],
+    explanation: "r = mv/(BQ); the radius is directly proportional to speed v, so increasing speed increases the radius of the circular path." },
+  { question: "Why does the induced current's direction (by Lenz's Law) always oppose the change in magnetic flux that caused it?",
+    options: ["Because induced current always flows in the same direction as the original field", "As a consequence of the law of conservation of energy", "Because coils always have large electrical resistance", "Because the magnetic field always decreases over time"],
+    explanation: "If the induced current reinforced (instead of opposing) the flux change, energy would be created with no external work done - violating conservation of energy." }
 ];
 const MAGNETIC_EKSPERIMEN_CHECK = [
   { question: "Pada eksperimen Neraca Arus ini, grafik gaya F terhadap arus I berbentuk garis lurus melalui titik asal. Apa makna GRADIEN grafik tersebut?",
@@ -1538,7 +1593,7 @@ const MAGNETIC_EKSPERIMEN_CHECK_EN = [
   });
   topic.labConcepts = MAGNETIC_LAB_CONCEPTS.map((c, i) => ({ id: c, en: MAGNETIC_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: MAGNETIC_FORMULA_SHEET, en: MAGNETIC_FORMULA_SHEET_EN };
-  topic.materiCheck = mapSingleCheck(MAGNETIC_MATERI_CHECK, MAGNETIC_MATERI_CHECK_EN);
+  topic.materiCheck = mapCheckQuestions(MAGNETIC_MATERI_CHECK, MAGNETIC_MATERI_CHECK_EN);
   topic.eksperimenCheck = mapCheckQuestions(MAGNETIC_EKSPERIMEN_CHECK, MAGNETIC_EKSPERIMEN_CHECK_EN);
 })();
 
@@ -2400,12 +2455,36 @@ const TEMPERATURE_LAB_CONCEPTS_EN = [
 const TEMPERATURE_MATERI_CHECK = [
   { question: "Satuan SI untuk kapasitas kalor jenis (specific heat capacity) adalah...",
     options: ["J kg⁻¹", "J kg⁻¹ K⁻¹", "J K⁻¹", "Watt"], correct: 1,
-    explanation: "Kapasitas kalor jenis c didefinisikan dari E = mcΔθ, sehingga satuannya J kg⁻¹ K⁻¹." }
+    explanation: "Kapasitas kalor jenis c didefinisikan dari E = mcΔθ, sehingga satuannya J kg⁻¹ K⁻¹." },
+  { question: "Dua benda A dan B disentuhkan hingga tidak ada lagi aliran kalor NETO di antara keduanya. Kondisi ini disebut...",
+    options: ["Kesetimbangan termal", "Kalor laten", "Kapasitas kalor jenis", "Konduksi kalor"], correct: 0,
+    explanation: "Saat tidak ada lagi aliran kalor neto antara dua benda (suhu keduanya sama), keduanya dikatakan berada dalam kesetimbangan termal." },
+  { question: "Suhu 27°C jika dikonversi ke skala Kelvin (gunakan T/K = θ/°C + 273) adalah...",
+    options: ["27 K", "273 K", "300 K", "327 K"], correct: 2,
+    explanation: "T(K) = θ(°C) + 273 = 27 + 273 = 300 K." },
+  { question: "Saat es sedang melebur menjadi air pada 0°C, kalor terus diserap tetapi suhu campuran es-air tidak berubah. Ke mana energi kalor tersebut digunakan?",
+    options: ["Menaikkan energi kinetik rata-rata molekul", "Mengubah susunan/ikatan antarmolekul (mengubah wujud zat)", "Menaikkan tekanan sistem", "Energi tersebut hilang, tidak dipakai untuk apa pun"], correct: 1,
+    explanation: "Selama perubahan wujud, kalor (kalor laten) dipakai untuk mengubah susunan/ikatan antarmolekul, bukan menaikkan energi kinetik rata-rata molekul - itulah sebabnya suhu tetap konstan." },
+  { question: "Mengapa kalor uap jenis (Lv) suatu zat cair umumnya jauh LEBIH BESAR daripada kalor lebur jenisnya (Lf)?",
+    options: ["Karena menguap membutuhkan waktu lebih lama", "Karena menguap memutuskan hampir seluruh ikatan antarmolekul hingga molekul benar-benar terpisah menjadi gas, sedangkan melebur hanya mengubah susunan padat menjadi cair yang molekulnya masih berdekatan", "Karena tekanan atmosfer memengaruhi Lv tetapi tidak memengaruhi Lf", "Karena Lv selalu diukur pada suhu yang lebih tinggi daripada Lf"], correct: 1,
+    explanation: "Menguap berarti memutuskan hampir seluruh ikatan antarmolekul sehingga molekul terpisah jauh menjadi gas, sedangkan melebur hanya mengubah susunan padat yang kaku menjadi cair yang molekulnya masih berdekatan." }
 ];
 const TEMPERATURE_MATERI_CHECK_EN = [
   { question: "The SI unit for specific heat capacity is...",
     options: ["J kg⁻¹", "J kg⁻¹ K⁻¹", "J K⁻¹", "Watt"],
-    explanation: "Specific heat capacity c is defined from E = mcΔθ, so its unit is J kg⁻¹ K⁻¹." }
+    explanation: "Specific heat capacity c is defined from E = mcΔθ, so its unit is J kg⁻¹ K⁻¹." },
+  { question: "Two objects A and B are put in contact until there is no more NET flow of heat between them. This condition is called...",
+    options: ["Thermal equilibrium", "Latent heat", "Specific heat capacity", "Heat conduction"],
+    explanation: "When there is no more net heat flow between two objects (their temperatures are equal), they are said to be in thermal equilibrium." },
+  { question: "27°C converted to the Kelvin scale (using T/K = θ/°C + 273) is...",
+    options: ["27 K", "273 K", "300 K", "327 K"],
+    explanation: "T(K) = θ(°C) + 273 = 27 + 273 = 300 K." },
+  { question: "While ice is melting into water at 0°C, heat keeps being absorbed but the temperature of the ice-water mixture doesn't change. Where does that heat energy go?",
+    options: ["Into raising the average kinetic energy of the molecules", "Into changing the bonds/arrangement between molecules (changing state)", "Into raising the system's pressure", "It's lost - not used for anything"],
+    explanation: "During a change of state, the heat (latent heat) is used to change the bonds/arrangement between molecules, not to raise the average molecular kinetic energy - which is why the temperature stays constant." },
+  { question: "Why is the specific latent heat of vaporisation (Lv) of a liquid usually much LARGER than its specific latent heat of fusion (Lf)?",
+    options: ["Because vaporising takes longer", "Because vaporising breaks nearly all the intermolecular bonds so molecules separate completely into a gas, while melting only turns a rigid solid arrangement into a liquid where molecules are still close together", "Because atmospheric pressure affects Lv but not Lf", "Because Lv is always measured at a higher temperature than Lf"],
+    explanation: "Vaporising breaks nearly all the intermolecular bonds so the molecules become widely separated as a gas, while melting only changes a rigid solid arrangement into a liquid where molecules remain close together." }
 ];
 const TEMPERATURE_EKSPERIMEN_CHECK = [
   { question: "Pada eksperimen ini, energi listrik dihitung dengan E = VIt. Untuk menentukan kapasitas kalor jenis c aluminium, energi ini dibagi dengan...",
@@ -2443,7 +2522,7 @@ const TEMPERATURE_EKSPERIMEN_CHECK_EN = [
   });
   topic.labConcepts = TEMPERATURE_LAB_CONCEPTS.map((c, i) => ({ id: c, en: TEMPERATURE_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: TEMPERATURE_FORMULA_SHEET, en: TEMPERATURE_FORMULA_SHEET_EN };
-  topic.materiCheck = mapSingleCheck(TEMPERATURE_MATERI_CHECK, TEMPERATURE_MATERI_CHECK_EN);
+  topic.materiCheck = mapCheckQuestions(TEMPERATURE_MATERI_CHECK, TEMPERATURE_MATERI_CHECK_EN);
   topic.eksperimenCheck = mapCheckQuestions(TEMPERATURE_EKSPERIMEN_CHECK, TEMPERATURE_EKSPERIMEN_CHECK_EN);
 })();
 
@@ -3332,12 +3411,36 @@ const IDEALGASES_LAB_CONCEPTS_EN = [
 const IDEALGASES_MATERI_CHECK = [
   { question: "Hukum Boyle menyatakan bahwa pada suhu tetap, hasil kali tekanan (p) dan volume (V) suatu gas bersifat...",
     options: ["Berbanding lurus dengan suhu", "Konstan", "Selalu bertambah", "Berbanding lurus dengan p saja"], correct: 1,
-    explanation: "Hukum Boyle: pV = konstan, selama suhu T dan jumlah mol gas n tetap." }
+    explanation: "Hukum Boyle: pV = konstan, selama suhu T dan jumlah mol gas n tetap." },
+  { question: "Sebanyak 2 mol suatu gas mengandung berapa banyak molekul (NA = 6,02×10²³ mol⁻¹)?",
+    options: ["6,02×10²³", "1,204×10²⁴", "3,01×10²³", "1,204×10²³"], correct: 1,
+    explanation: "N = nNA = 2 × 6,02×10²³ = 1,204×10²⁴ molekul." },
+  { question: "Mengapa suhu T pada persamaan gas ideal pV = nRT harus selalu dalam satuan kelvin, bukan derajat Celsius?",
+    options: ["Karena kelvin lebih mudah diukur alat", "Karena hubungan pV = nRT hanya berlaku untuk skala suhu MUTLAK, dengan T = 0 berarti energi kinetik molekul minimum", "Karena semua besaran SI harus memakai kelvin", "Karena angka dalam kelvin selalu lebih besar sehingga perhitungan lebih akurat"], correct: 1,
+    explanation: "pV = nRT hanya berlaku untuk suhu mutlak (skala termodinamika/Kelvin), karena T = 0 K berkaitan langsung dengan energi kinetik molekul minimum - bukan sekadar titik referensi sembarang seperti 0°C." },
+  { question: "Manakah yang BUKAN termasuk asumsi dasar model kinetik gas ideal?",
+    options: ["Molekul bergerak acak dengan berbagai kelajuan dan arah", "Volume molekul itu sendiri dapat diabaikan dibanding volume total gas", "Gaya tarik-menarik antarmolekul sangat kuat dan harus diperhitungkan", "Tumbukan antarmolekul bersifat lenting sempurna"], correct: 2,
+    explanation: "Salah satu asumsi dasar model kinetik gas ideal justru MENGABAIKAN gaya antarmolekul (kecuali saat tumbukan) - pilihan ini bertentangan dengan asumsi tersebut." },
+  { question: "Jika suhu mutlak suatu gas ideal dinaikkan dari 300 K menjadi 600 K, apa yang terjadi pada energi kinetik translasi rata-rata tiap molekulnya?",
+    options: ["Tetap sama", "Menjadi dua kali lipat", "Menjadi empat kali lipat", "Menjadi setengah kali"], correct: 1,
+    explanation: "Ek = (3/2)kT sebanding lurus dengan suhu mutlak T, jadi menggandakan T juga menggandakan Ek rata-rata tiap molekul." }
 ];
 const IDEALGASES_MATERI_CHECK_EN = [
   { question: "Boyle's Law states that, at constant temperature, the product of pressure (p) and volume (V) of a gas is...",
     options: ["Directly proportional to temperature", "Constant", "Always increasing", "Directly proportional to p alone"],
-    explanation: "Boyle's Law: pV = constant, as long as temperature T and amount of gas n stay fixed." }
+    explanation: "Boyle's Law: pV = constant, as long as temperature T and amount of gas n stay fixed." },
+  { question: "How many molecules are in 2 moles of a gas (NA = 6.02×10²³ mol⁻¹)?",
+    options: ["6.02×10²³", "1.204×10²⁴", "3.01×10²³", "1.204×10²³"],
+    explanation: "N = nNA = 2 × 6.02×10²³ = 1.204×10²⁴ molecules." },
+  { question: "Why must the temperature T in the ideal gas equation pV = nRT always be in kelvin, not degrees Celsius?",
+    options: ["Because kelvin is easier to measure with instruments", "Because pV = nRT only holds for the ABSOLUTE temperature scale, where T = 0 means minimum molecular kinetic energy", "Because all SI quantities must use kelvin", "Because numbers in kelvin are always larger, giving more accurate calculations"],
+    explanation: "pV = nRT only holds for absolute (thermodynamic/Kelvin) temperature, since T = 0 K corresponds directly to minimum molecular kinetic energy - not just an arbitrary reference point like 0°C." },
+  { question: "Which of these is NOT a basic assumption of the kinetic model of an ideal gas?",
+    options: ["Molecules move randomly with a range of speeds and directions", "The volume of the molecules themselves is negligible compared to the gas's total volume", "Attractive forces between molecules are strong and must be accounted for", "Collisions between molecules are perfectly elastic"],
+    explanation: "One basic assumption of the kinetic model is that intermolecular forces are actually NEGLIGIBLE (except during collisions) - this option contradicts that assumption." },
+  { question: "If the absolute temperature of an ideal gas is raised from 300 K to 600 K, what happens to the average translational kinetic energy of each molecule?",
+    options: ["Stays the same", "Doubles", "Quadruples", "Halves"],
+    explanation: "Ek = (3/2)kT is directly proportional to absolute temperature T, so doubling T also doubles the average kinetic energy per molecule." }
 ];
 const IDEALGASES_EKSPERIMEN_CHECK = [
   { question: "Pada eksperimen ini, panjang kolom udara L dipakai untuk mewakili volume V gas. Mengapa ini valid tanpa perlu mengukur luas penampang tabung A?",
@@ -3375,7 +3478,7 @@ const IDEALGASES_EKSPERIMEN_CHECK_EN = [
   });
   topic.labConcepts = IDEALGASES_LAB_CONCEPTS.map((c, i) => ({ id: c, en: IDEALGASES_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: IDEALGASES_FORMULA_SHEET, en: IDEALGASES_FORMULA_SHEET_EN };
-  topic.materiCheck = mapSingleCheck(IDEALGASES_MATERI_CHECK, IDEALGASES_MATERI_CHECK_EN);
+  topic.materiCheck = mapCheckQuestions(IDEALGASES_MATERI_CHECK, IDEALGASES_MATERI_CHECK_EN);
   topic.eksperimenCheck = mapCheckQuestions(IDEALGASES_EKSPERIMEN_CHECK, IDEALGASES_EKSPERIMEN_CHECK_EN);
 })();
 
@@ -4092,12 +4195,36 @@ const THERMODYNAMICS_LAB_CONCEPTS_EN = [
 const THERMODYNAMICS_MATERI_CHECK = [
   { question: "Pada proses adiabatik, nilai kalor (q) yang berpindah ke/dari sistem adalah...",
     options: ["Selalu maksimum", "Nol (tidak ada perpindahan kalor)", "Sama dengan kerja w", "Tak terhingga"], correct: 1,
-    explanation: "Proses adiabatik didefinisikan sebagai proses tanpa perpindahan kalor, q = 0." }
+    explanation: "Proses adiabatik didefinisikan sebagai proses tanpa perpindahan kalor, q = 0." },
+  { question: "Manakah pernyataan yang paling tepat tentang energi dalam (internal energy) suatu gas ideal?",
+    options: ["Energi dalam sama persis dengan suhu gas", "Energi dalam adalah jumlah energi kinetik dan energi potensial acak seluruh molekul; untuk gas ideal seluruhnya berupa energi kinetik karena energi potensial antarmolekul diabaikan", "Energi dalam hanya bergantung pada tekanan gas", "Energi dalam gas ideal selalu bernilai nol"], correct: 1,
+    explanation: "Energi dalam U = jumlah EK + EP acak seluruh molekul. Untuk gas ideal, gaya antarmolekul diabaikan sehingga EP = 0 dan U seluruhnya berupa energi kinetik." },
+  { question: "Sesuai konvensi Cambridge 9702 (ΔU = q + w), jika gas MEMUAI dan melakukan kerja pada lingkungan, maka nilai w bertanda...",
+    options: ["Positif", "Negatif", "Nol", "Tidak dapat ditentukan"], correct: 1,
+    explanation: "w adalah kerja yang dilakukan PADA gas. Saat gas memuai (melakukan kerja pada lingkungan, bukan menerimanya), w bertanda negatif." },
+  { question: "Sejumlah gas dipanaskan di dalam wadah kaku tertutup rapat (volume tetap). Berdasarkan hukum pertama termodinamika, apa yang terjadi?",
+    options: ["w = 0, sehingga ΔU = q (seluruh kalor menjadi pertambahan energi dalam)", "q = 0, sehingga ΔU = w", "ΔU selalu nol karena volume tetap", "Kalor tidak bisa masuk ke sistem bervolume tetap"], correct: 0,
+    explanation: "Karena volume tidak berubah, tidak ada kerja (w = 0), sehingga ΔU = q: seluruh kalor yang diterima langsung menjadi pertambahan energi dalam." },
+  { question: "Pada grafik tekanan (p) terhadap volume (V), besar kerja yang terlibat pada suatu proses ditunjukkan oleh...",
+    options: ["Gradien kurva", "Luas daerah di bawah kurva antara volume awal dan akhir", "Titik potong kurva dengan sumbu p", "Panjang kurva itu sendiri"], correct: 1,
+    explanation: "Besar kerja pada suatu proses sama dengan luas daerah di bawah kurva pada grafik p-V; W = pΔV hanyalah kasus khusus saat tekanan konstan." }
 ];
 const THERMODYNAMICS_MATERI_CHECK_EN = [
   { question: "In an adiabatic process, the amount of heat (q) transferred to/from the system is...",
     options: ["Always maximum", "Zero (no heat transfer)", "Equal to the work w", "Infinite"],
-    explanation: "An adiabatic process is defined as one with no heat transfer, q = 0." }
+    explanation: "An adiabatic process is defined as one with no heat transfer, q = 0." },
+  { question: "Which statement most accurately describes the internal energy of an ideal gas?",
+    options: ["Internal energy is exactly the same thing as the gas's temperature", "Internal energy is the sum of the random kinetic and potential energies of all molecules; for an ideal gas it is entirely kinetic since intermolecular potential energy is neglected", "Internal energy depends only on the gas's pressure", "The internal energy of an ideal gas is always zero"],
+    explanation: "Internal energy U = sum of random KE + PE of all molecules. For an ideal gas, intermolecular forces are neglected so PE = 0 and U is entirely kinetic energy." },
+  { question: "Using the Cambridge 9702 convention (ΔU = q + w), if a gas EXPANDS and does work on its surroundings, what is the sign of w?",
+    options: ["Positive", "Negative", "Zero", "Cannot be determined"],
+    explanation: "w is the work done ON the gas. When the gas expands (doing work on its surroundings rather than receiving it), w is negative." },
+  { question: "A gas is heated inside a rigid, sealed container (constant volume). According to the first law of thermodynamics, what happens?",
+    options: ["w = 0, so ΔU = q (all the heat becomes an increase in internal energy)", "q = 0, so ΔU = w", "ΔU is always zero because the volume is fixed", "Heat cannot enter a constant-volume system"],
+    explanation: "Since the volume doesn't change, no work is done (w = 0), so ΔU = q: all the heat supplied directly becomes an increase in internal energy." },
+  { question: "On a pressure (p) vs volume (V) graph, the amount of work involved in a process is shown by...",
+    options: ["The gradient of the curve", "The area under the curve between the initial and final volumes", "Where the curve crosses the p-axis", "The length of the curve itself"],
+    explanation: "The work done in a process equals the area under the curve on a p-V graph; W = pΔV is just the special case when pressure is constant." }
 ];
 const THERMODYNAMICS_EKSPERIMEN_CHECK = [
   { question: "Pada peragaan fire piston, piston didorong SANGAT CEPAT ke dalam tabung. Mengapa kecepatan ini penting agar prosesnya mendekati adiabatik?",
@@ -4135,6 +4262,6 @@ const THERMODYNAMICS_EKSPERIMEN_CHECK_EN = [
   });
   topic.labConcepts = THERMODYNAMICS_LAB_CONCEPTS.map((c, i) => ({ id: c, en: THERMODYNAMICS_LAB_CONCEPTS_EN[i] }));
   topic.formulaSheet = { id: THERMODYNAMICS_FORMULA_SHEET, en: THERMODYNAMICS_FORMULA_SHEET_EN };
-  topic.materiCheck = mapSingleCheck(THERMODYNAMICS_MATERI_CHECK, THERMODYNAMICS_MATERI_CHECK_EN);
+  topic.materiCheck = mapCheckQuestions(THERMODYNAMICS_MATERI_CHECK, THERMODYNAMICS_MATERI_CHECK_EN);
   topic.eksperimenCheck = mapCheckQuestions(THERMODYNAMICS_EKSPERIMEN_CHECK, THERMODYNAMICS_EKSPERIMEN_CHECK_EN);
 })();

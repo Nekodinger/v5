@@ -316,10 +316,12 @@ const I18N_STRINGS = {
   "confirm.tryagain": { id: "Masih ada jawaban yang kurang tepat - lihat penjelasan di tiap soal, lalu coba lagi.", en: "Some answers aren't quite right yet - check the explanation on each question, then try again." },
   "confirm.generic.label": { id: "Saya sudah membaca/mengerjakan bagian ini dan siap melanjutkan.", en: "I have read/completed this section and I'm ready to continue." },
   "confirm.generic.needcheck": { id: "Centang dulu kotak konfirmasi di atas.", en: "Please check the confirmation box above first." },
+  "confirm.scorepass": { id: "Lulus! Skor kamu {{score}}%.", en: "Passed! Your score: {{score}}%." },
+  "confirm.scorefail": { id: "Skor kamu {{score}}% ({{correct}}/{{total}} benar) - belum mencapai minimum {{min}}%. Tutup jendela ini, pelajari kembali Materi Belajar di atas, lalu klik tombol Next lagi untuk mencoba ulang.", en: "Your score: {{score}}% ({{correct}}/{{total}} correct) - below the {{min}}% minimum needed. Close this window, review the Learning Material above, then click Next again to retry." },
 
   /* ---------------- Gate Materi (self-check, tanpa guru) ---------------- */
   "gate.materi.title": { id: "Konfirmasi Pemahaman: Materi", en: "Understanding Check: Learning Material" },
-  "gate.materi.desc": { id: "Jawab pertanyaan singkat ini untuk membuka tab Eksperimen.", en: "Answer this short question to unlock the Experiment tab." },
+  "gate.materi.desc": { id: "Jawab kelima pertanyaan berikut. Kamu perlu skor minimal 80% untuk membuka tab Eksperimen - kalau belum, pelajari kembali Materi Belajar dulu lalu coba lagi.", en: "Answer the five questions below. You need a minimum score of 80% to unlock the Experiment tab - if not, review the Learning Material again first, then retry." },
   "gate.materi.fallback": { id: "Saya sudah membaca dan memahami materi topik ini.", en: "I have read and understood this topic's material." },
 
   /* ---------------- Gate Eksperimen (self-check + konfirmasi guru) ---------------- */

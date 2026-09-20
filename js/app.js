@@ -186,7 +186,16 @@ function renderConfirmQuestions(questions) {
       <p class="confirm-feedback muted small" hidden></p>
     </div>`).join("");
 }
-// opts: { title, desc, questions (array|null), fallbackLabel, submitLabel, onPass }
+// Ambang skor minimum (dalam %) supaya siswa dianggap "lulus" konfirmasi
+// pemahaman Materi - TIDAK harus benar 100% seperti gate lain (Eksperimen/
+// fallback generik tetap butuh benar semua, threshold default 100 di bawah).
+// Kalau skor < ambang ini, modal TIDAK menutup/lanjut - siswa diminta
+// mempelajari kembali Materi Belajar dulu baru mencoba lagi (lihat
+// openConfirmModal() & startMateriGate()).
+const PASS_THRESHOLD_MATERI = 80;
+
+// opts: { title, desc, questions (array|null), fallbackLabel, submitLabel,
+//         passThreshold (0-100, default 100 = harus benar semua), onPass }
 // questions null -> tampil sebagai satu checkbox konfirmasi generik (fallback
 // untuk topik yang belum diisi soal konfirmasi terstruktur).
 function openConfirmModal(opts) {
@@ -196,6 +205,7 @@ function openConfirmModal(opts) {
   const body = document.getElementById("confirm-modal-body");
   const statusEl = document.getElementById("confirm-modal-status");
   statusEl.textContent = "";
+  statusEl.className = "teacher-note";
   let submitBtn = document.getElementById("confirm-modal-submit-btn");
   submitBtn.textContent = opts.submitLabel || t("confirm.checkbtn");
   // Ganti tombol dengan clone supaya listener lama (dari pemanggilan
@@ -206,31 +216,46 @@ function openConfirmModal(opts) {
 
   if (opts.questions && opts.questions.length) {
     body.innerHTML = renderConfirmQuestions(opts.questions);
+    const threshold = opts.passThreshold != null ? opts.passThreshold : 100;
     submitBtn.addEventListener("click", () => {
       const cards = body.querySelectorAll(".question-card");
-      let allCorrect = true;
+      let answeredAll = true;
+      let correctCount = 0;
       cards.forEach((card, qi) => {
         const checked = card.querySelector(`input[name="cq-${qi}"]:checked`);
         const feedback = card.querySelector(".confirm-feedback");
         const q = opts.questions[qi];
         if (!checked) {
-          allCorrect = false;
+          answeredAll = false;
           feedback.hidden = false;
           feedback.textContent = t("confirm.pickanswer");
           feedback.className = "confirm-feedback small warn";
           return;
         }
         const isRight = parseInt(checked.value, 10) === q.correct;
-        if (!isRight) allCorrect = false;
+        if (isRight) correctCount++;
         feedback.hidden = false;
         feedback.textContent = isRight ? t("confirm.correct") : (trContent(q.explanation) || t("confirm.wrong"));
         feedback.className = "confirm-feedback small " + (isRight ? "ok" : "warn");
       });
-      if (allCorrect) {
+      if (!answeredAll) {
+        statusEl.className = "teacher-note";
+        statusEl.textContent = t("confirm.tryagain");
+        return;
+      }
+      const total = opts.questions.length;
+      const scorePct = Math.round((correctCount / total) * 100);
+      if (scorePct >= threshold) {
+        if (opts.showScoreOnPass) showToast(t("confirm.scorepass", { score: scorePct }));
         el.hidden = true;
         opts.onPass();
       } else {
-        statusEl.textContent = t("confirm.tryagain");
+        // Skor belum cukup - modal TETAP TERBUKA (tidak lanjut), siswa harus
+        // menutup, mempelajari ulang materi di atas, lalu klik Next lagi
+        // untuk membuka modal ini dari awal (state soal ke-reset otomatis
+        // karena body.innerHTML dirender ulang tiap openConfirmModal()).
+        statusEl.className = "teacher-note gate-score-fail";
+        statusEl.textContent = t("confirm.scorefail", { score: scorePct, correct: correctCount, total, min: threshold });
       }
     });
   } else {
@@ -251,8 +276,10 @@ function startMateriGate(onPass) {
   openConfirmModal({
     title: t("gate.materi.title"),
     desc: t("gate.materi.desc"),
-    questions: currentTopic.materiCheck ? [currentTopic.materiCheck] : null,
+    questions: (currentTopic.materiCheck && currentTopic.materiCheck.length) ? currentTopic.materiCheck : null,
     fallbackLabel: t("gate.materi.fallback"),
+    passThreshold: PASS_THRESHOLD_MATERI,
+    showScoreOnPass: true,
     onPass
   });
 }
