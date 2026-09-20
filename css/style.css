@@ -756,6 +756,11 @@ body.nav-pinned .topic-nav {
 .confirm-feedback { margin: 8px 0 0; }
 .confirm-feedback.ok { color: var(--good); }
 .confirm-feedback.warn { color: var(--warn); }
+/* Status skor kuis Materi (lihat openConfirmModal() di app.js) - dipakai
+   saat skor siswa BELUM mencapai ambang minimum (PASS_THRESHOLD_MATERI),
+   supaya pesan "pelajari kembali materi" cukup mencolok dibanding
+   .teacher-note biasa yang berwarna muted. */
+.gate-score-fail { color: var(--warn); font-weight: 600; }
 
 .gate-banner {
   display: flex;
